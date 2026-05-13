@@ -1,131 +1,46 @@
+# NCE Shadow Reading
 
-# 新概念英语 · 全四册在线点读系统
+一个现代化的新概念英语学习平台，提供沉浸式的课文跟读体验。
 
-[![Stars](https://img.shields.io/github/stars/ichochy/nce.svg?style=social)](https://github.com/ichochy/nce/stargazers)
-[![License](https://img.shields.io/github/license/ichochy/nce)](https://github.com/ichochy/nce/blob/main/LICENSE)
-[![Demo](https://img.shields.io/badge/Demo-在线体验-brightgreen)](http://nce.ichochy.com)
+## ✨ 特性
 
-**《New Concept English》** 全四册在线课文朗读、**单句点读**、中英对照，随时随地自学英语！
+- 🎧 **智能音频加载**：优先读取本地文件，自动回退远程资源，确保流畅播放。
+- 📍 **单句精听模式**：点击任意句子即可循环播放，支持变速与中英对照切换。
+- 💎 **沉浸式 UI 设计**：
+  - 目录页：卡片式布局，清晰展示课程进度。
+  - 播放页：磨砂玻璃弹窗，专注于内容阅读。
+- 📱 **响应式布局**：完美适配桌面端与移动端设备。
+- 🚀 **PWA 支持**：支持离线缓存，随时学习。
 
----
+## 📦 本地部署
 
-### ✨ 主要功能
+本项目为纯静态网站，无需构建工具，可直接运行。
 
-- 🎧 **美音课文朗读**：流畅自然的原版音频
-- 📍 **单句点读**：点击任意句子即可跟读练习
-- 📖 **中英对照**：逐句显示中英文，便于理解
-- 📱 **响应式设计**：手机、平板、电脑均可流畅使用
-- 🚀 **无需安装**：浏览器直接访问，随时学习
+```bash
+python3 -m http.server 8000
+```
+然后在浏览器访问 `http://localhost:8000`。
 
-**在线体验**：👉 **[http://nce.ichochy.com](http://nce.ichochy.com)**
+## 🛠️ 资源管理
 
----
+系统支持本地与远程双源音频文件。
 
-### 📸 截图
-
-![pc.jpg](screenshot/pc.png)
-
-![mobile.jpg](screenshot/mobile.png)
-
-### 📚 四册学习指南
-
-#### 📕 第一册：《First Things First》
-**目标**：打好语音与基础  
-**课数**：144课 | **词汇量**：约 600 词  
-适合 **零基础** 学习者，建立语感和正确发音。
-
-#### 📘 第二册：《Practice and Progress》
-**目标**：语法体系与听说读写同步提升  
-**课数**：96课 | **词汇量**：约 1500 词  
-适合有基础的学习者，系统梳理语法。
-
-#### 📙 第三册：《Developing Skills》
-**目标**：进阶阅读与复杂句型  
-**课数**：60课 | **词汇量**：约 2500 词  
-适合想提高综合能力、阅读原版材料的学习者。
-
-#### 📗 第四册：《Fluency in English》
-**目标**：接近流利表达与学术阅读  
-**课数**：48课 | **词汇量**：约 3500–4000 词  
-适合高阶学习者、考研/雅思/托福备考。
-
-**推荐学习路径**：按册顺序学习 → 第一册打基础 → 第四册冲刺流利。
-
----
-
-### 🛠️ 技术与资源
-
-- **前端**：HTML + CSS + JavaScript（纯静态实现）
-- **音频来源**：美音音频来自 [tangx/New-Concept-English](https://github.com/tangx/New-Concept-English)
-- **中文字幕**：由 Gemini AI 生成（已尽力优化，但可能存在少量错误，欢迎大家指正与贡献）
-- **翻译脚本**：作者自研 Python 工具 [iGSTT](https://ichochy.com/posts/shell/20251015.html)
-
-#### 📦 本地音频配置
-
-系统支持使用本地音频文件，优先加载本地资源，未找到时自动回退到远程服务器。
-
-**目录结构**：
+**本地音频目录结构**：
 ```
 audio/
 ├── NCE1/
 │   ├── unit001.mp3
 │   ├── unit001.lrc
 │   └── ...
-├── NCE2/
-├── NCE3/
-├── NCE4/
-├── NCE1(85)/
-├── NCE2(85)/
-├── NCE3(85)/
-└── NCE4(85)/
+└── NCE2/
+    ├── unit001.mp3
+    ├── unit001.lrc
+    └── ...
 ```
 
-将 MP3 音频和 LRC 歌词文件按对应书本目录放入 `audio/` 文件夹即可。文件名需与远程服务器保持一致（如 `unit001.mp3`、`unit001.lrc`）。
+- 将对应的 MP3 和 LRC 文件放入目录，系统将优先加载本地资源。
+- 远程资源地址配置在 `js/main.js` 的 `REMOTE_BASE` 中。
 
----
+## ⚖️ 版权说明
 
-### ⚠️ 说明与版权
-
-- 本项目**仅供个人学习研究使用**，非商业用途。
-- 所有内容来源于互联网，我们不拥有版权。
-- 如有侵权，请联系 [me@ichochy.com](mailto:me@ichochy.com) 及时处理。
-- **强烈建议**支持正版，购买官方教材与音频。
-
----
-
-### 🤝 如何贡献
-
-欢迎大家一起完善这个项目！
-
-- 提交 Issue 反馈翻译错误、功能建议
-- Pull Request 改进代码、修正字幕、添加新功能
-- 分享给更多英语学习者
-
----
-
-### ❤️ 支持作者
-
-我是 80 后码农，目前正在与白血病（CMML）抗争。  
-工作已暂停，在家无聊就重学英语，就有了这个项目。
-
-如果这个项目对你学习英语有帮助，欢迎：
-
-- **点个 Star** ⭐（这是对我最大的鼓励）
-- 打赏一杯咖啡 / 一点生命值（可选）
-
-<img src="sponsor.jpg" width="200" />
-
-**感谢每一位使用和支持的朋友！**  
-你的每一次学习，都是对坚持最好的回报。
-
----
-
-**Keep learning — progress comes with persistence.**  
-**坚持学习，每一天都有进步。**
-
----
-
-**作者**：iChochy  
-**Blog**：https://ichochy.com  
-**Email**：me@ichochy.com  
-**GitHub**：https://github.com/ichochy/nce
+本项目仅供个人学习与技术研究使用。音频及文本版权归原作者所有，如有侵犯您的权益，请联系我们删除。

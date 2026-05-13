@@ -1,990 +1,631 @@
-// Author: Qim
-// Blog: https://ichochy.com
-// Email: Qim.it@icloud.com
-// FileName: iReader:main.js
-// Update: 2025/12/5 19:41
-// Copyright (c) 2025.
+const REMOTE_BASE = {
+  NCE1: 'https://raw.githubusercontent.com/ichochy/NCE/main/book1',
+  NCE2: 'https://raw.githubusercontent.com/ichochy/NCE/main/book2'
+};
 
-const DEFAULT_BOOK_KEY = 'NCE1';
-const PLAY_MODE_STORAGE_KEY = 'playMode';
-const BOOK_SELECTION_STORAGE_KEY = 'selectedBookKey';
+const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
-const qs = (selector, root = document) => root.querySelector(selector);
-const qsa = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const STORAGE_KEYS = {
+  BOOK: 'nce_selected_book',
+  UNIT_INDEX: (book) => `nce_${book}_unit`,
+  PLAY_TIME: (book, unit) => `nce_${book}_${unit}_time`,
+  SPEED: 'nce_speed',
+  MODE: 'nce_mode',
+  TRANSLATION: 'nce_translation'
+};
 
+class LrcProcessor {
+  static decode(raw) {
+    const entries = [];
+    const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]\s*(.+)/;
 
-class ReadingSystem {
-  constructor() {
-    this.state = {
-      books: [],
-      units: [],
-      bookPath: '',
-      bookKey: '',
-      currentLyrics: [],
-      currentLyricIndex: -1,
-      currentUnitIndex: -1,
-      playMode: 'single',
-      singlePlayEndTime: null,
-      playbackRate: 1.0,
-      translationMode: 'show',
-      availableSpeeds: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0],
-      savedPlayTime: 0,
-      isProgressDragging: false
-    };
+    for (const line of raw.split('\n')) {
+      const match = line.match(regex);
+      if (!match) continue;
 
-    this.dom = {
-      audioPlayer: qs('#audioPlayer'),
-      lyricsDisplay: qs('#playerLyrics'),
-      lyricsContainer: qs('.player-lyrics-area'),
-      unitList: qs('#unitListContainer'),
-      playModeBtn: qs('#playModeBtn'),
-      playPauseBtn: qs('#playPauseBtn'),
-      progressBar: qs('#progressBar'),
-      currentTime: qs('#currentTime'),
-      duration: qs('#duration'),
-      speedBtn: qs('#speedBtn'),
-      speedText: qs('#speedText'),
-      bookSelects: qsa('.book-select'),
-      prevUnitBtn: qs('#prevUnitBtn'),
-      nextUnitBtn: qs('#nextUnitBtn'),
-      toggleTranslationBtn: qs('#toggleTranslationBtn'),
-      homeView: qs('#homeView'),
-      playerView: qs('#playerView'),
-      playerBackBtn: qs('#playerBackBtn'),
-      playerTitle: qs('#playerTitle')
-    };
+      const mins = parseInt(match[1], 10);
+      const secs = parseInt(match[2], 10);
+      const ms = parseInt(match[3], 10);
+      const offset = match[3].length === 2 ? ms * 10 : ms;
+      const timestamp = mins * 60 + secs + offset / 1000 - 0.5;
 
-    this.lyricLineEls = [];
-    this.unitListBound = false;
-    this.bookSelectsBound = false;
-    this.lyricsBound = false;
-    this.lrcCache = new Map();
-    this.audioPreload = new Map();
+      const content = match[4].trim();
+      const segments = content.split('|').map((s) => s.trim());
 
-    this.init();
+      entries.push({
+        time: Math.max(0, timestamp),
+        en: segments[0] || '',
+        cn: segments[1] || ''
+      });
+    }
+
+    return entries.sort((a, b) => a.time - b.time);
   }
+}
 
-  async init() {
-    await this.loadBooks();
-    await this.applyBookFromHash();
-    this.bindEvents();
-    this.loadPlayModePreference();
-    this.updatePlayModeUI();
-    this.loadTranslationPreference();
-    this.updateTranslationToggle();
-    await this.loadUnitFromStorage();
-  }
-
-  async loadBooks() {
-    if (this.state.books.length) return this.state.books;
+class AudioResolver {
+  static async fetchWithFallback(localSrc, remoteSrc) {
     try {
-      const response = await fetch('data.json');
-      const data = await response.json();
-      this.state.books = Array.isArray(data.books) ? data.books : [];
-    } catch (error) {
-      console.error('加载课本数据失败:', error);
-      this.state.books = [];
+      const resp = await fetch(localSrc, { method: 'HEAD' });
+      if (resp.ok) return localSrc;
+    } catch {
+      // local not available
     }
-    return this.state.books;
+    return remoteSrc;
   }
 
-  resolveBookByKey(bookKey) {
-    if (!this.state.books.length) return null;
-    const exact = this.state.books.find((book) => book && book.key === bookKey);
-    if (exact && exact.bookPath) return exact;
-    const fallback = this.state.books.find((book) => book && book.key === DEFAULT_BOOK_KEY);
-    if (fallback && fallback.bookPath) return fallback;
-    return this.state.books.find((book) => book && book.bookPath) || null;
+  static buildLocal(bookKey, filename, ext) {
+    return `./audio/${bookKey}/${filename}.${ext}`;
   }
 
-  async applyBookFromHash() {
-    const keyFromHash = location.hash.slice(1).trim();
-    const storedBookKey = this.loadBookPreference();
-    const initialBookKey = keyFromHash || storedBookKey || DEFAULT_BOOK_KEY;
-    await this.applyBookChange(initialBookKey);
+  static buildRemote(bookKey, filename, ext) {
+    return `${REMOTE_BASE[bookKey]}/${filename}.${ext}`;
+  }
+}
+
+class PlaybackEngine {
+  constructor(audioEl) {
+    this.audio = audioEl;
+    this.mode = localStorage.getItem(STORAGE_KEYS.MODE) || 'single';
+    this.speed = parseFloat(localStorage.getItem(STORAGE_KEYS.SPEED)) || 1.0;
+    this.lineEndBoundary = null;
+
+    this.audio.playbackRate = this.speed;
+    this.audio.addEventListener('timeupdate', () => this._onTick());
+    this.audio.addEventListener('ended', () => this._onFinish());
   }
 
-  loadBookPreference() {
-    return localStorage.getItem(BOOK_SELECTION_STORAGE_KEY)?.trim() || '';
-  }
-
-  persistBookPreference(bookKey) {
-    if (!bookKey) return;
-    localStorage.setItem(BOOK_SELECTION_STORAGE_KEY, bookKey);
-  }
-
-  async applyBookChange(bookKey) {
-    await this.loadBooks();
-    const resolved = this.resolveBookByKey(bookKey);
-
-    if (!resolved || !resolved.bookPath) {
-      this.state.bookPath = '';
-      this.state.bookKey = '';
-      this.renderEmptyState('未找到可用课本数据');
-      return;
-    }
-
-    this.state.bookKey = resolved.key || bookKey;
-    this.state.bookPath = resolved.bookPath.trim();
-    this.persistBookPreference(this.state.bookKey);
-
-    this.updateBookSelects();
-    await this.loadBookConfig();
-    this.renderUnitList();
-    this.resetUnitListScroll();
-  }
-
-  renderEmptyState(message) {
-    if (this.dom.lyricsDisplay) {
-      this.dom.lyricsDisplay.innerHTML = `<p class="placeholder">${message}</p>`;
-    }
-    if (this.dom.unitList) {
-      this.dom.unitList.innerHTML = '';
-    }
-    this.resetUnitListScroll();
-  }
-
-  resetUnitListScroll() {
-    const scrollContainer = this.dom.unitList?.closest('.unit-list');
-    if (scrollContainer) {
-      scrollContainer.scrollTop = 0;
-    }
-  }
-
-  buildAudioUrl(filename) {
-    const localPath = `./audio/${this.state.bookKey}/${filename}.mp3`;
-    const remoteUrl = `${this.state.bookPath}/${filename}.mp3`;
-    return { local: localPath, remote: remoteUrl };
-  }
-
-  buildLrcUrl(filename) {
-    const localPath = `./audio/${this.state.bookKey}/${filename}.lrc`;
-    const remoteUrl = `${this.state.bookPath}/${filename}.lrc`;
-    return { local: localPath, remote: remoteUrl };
-  }
-
-  async loadBookConfig() {
-    if (!this.state.bookPath) {
-      this.renderEmptyState('未找到可用课本数据');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${this.state.bookPath}/book.json`);
-      const data = await response.json();
-
-      this.state.units = data.units.map((unit, index) => ({
-        ...unit,
-        id: index + 1,
-        title: unit.title,
-        audio: this.buildAudioUrl(unit.filename),
-        lrc: this.buildLrcUrl(unit.filename)
-      }));
-
-      this.lrcCache.clear();
-      this.audioPreload.clear();
-    } catch (error) {
-      console.error('加载课件配置失败:', error);
-      this.renderEmptyState(`课件配置加载失败，请检查 ${this.state.bookPath}/book.json 文件`);
-    }
-  }
-
-  updateBookSelects() {
-    if (!this.dom.bookSelects.length || !this.state.books.length) return;
-
-    const options = this.state.books
-      .filter((book) => book && book.key && book.title && book.bookPath)
-      .map((book) => `<option value="${book.key}">${book.title}</option>`)
-      .join('');
-
-    this.dom.bookSelects.forEach((select) => {
-      select.innerHTML = `${options}`;
-      if (this.state.bookKey) {
-        select.value = this.state.bookKey;
-      }
+  async load(localSrc, remoteSrc) {
+    const resolved = await AudioResolver.fetchWithFallback(localSrc, remoteSrc);
+    this.audio.src = resolved;
+    this.audio.load();
+    return new Promise((resolve, reject) => {
+      this.audio.addEventListener('canplay', resolve, { once: true });
+      this.audio.addEventListener('error', reject, { once: true });
     });
   }
 
-  renderUnitList() {
-    if (!this.dom.unitList) return;
+  seekTo(seconds) {
+    this.audio.currentTime = seconds;
+  }
 
-    this.dom.unitList.innerHTML = this.state.units
-      .map(
-        (unit, index) => `
-      <div class="unit-card" data-unit-index="${index}" tabindex="0" role="button" aria-label="打开 ${unit.title}">
-        <span class="unit-card-number">${String(index + 1).padStart(2, '0')}</span>
-        <span class="unit-card-title">${unit.title}</span>
-      </div>
-    `
-      )
+  play() {
+    this.audio.play();
+  }
+
+  pause() {
+    this.audio.pause();
+  }
+
+  toggle() {
+    if (this.audio.paused) {
+      this.play();
+    } else {
+      this.pause();
+    }
+  }
+
+  setBoundary(endTime) {
+    this.lineEndBoundary = endTime;
+  }
+
+  clearBoundary() {
+    this.lineEndBoundary = null;
+  }
+
+  cycleSpeed() {
+    const idx = SPEED_OPTIONS.indexOf(this.speed);
+    this.speed = SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length];
+    this.audio.playbackRate = this.speed;
+    localStorage.setItem(STORAGE_KEYS.SPEED, this.speed);
+    return this.speed;
+  }
+
+  toggleMode() {
+    this.mode = this.mode === 'single' ? 'loop' : 'single';
+    localStorage.setItem(STORAGE_KEYS.MODE, this.mode);
+    return this.mode;
+  }
+
+  _onTick() {
+    if (this.mode === 'single' && this.lineEndBoundary !== null) {
+      if (this.audio.currentTime >= this.lineEndBoundary) {
+        this.audio.pause();
+        this.audio.currentTime = this.lineEndBoundary - 0.01;
+        this.clearBoundary();
+      }
+    }
+  }
+
+  _onFinish() {
+    if (this.mode === 'loop') {
+      this._advanceCallback?.();
+    }
+  }
+
+  set onAdvance(fn) {
+    this._advanceCallback = fn;
+  }
+
+  get paused() {
+    return this.audio.paused;
+  }
+
+  get currentTime() {
+    return this.audio.currentTime;
+  }
+
+  get duration() {
+    return this.audio.duration || 0;
+  }
+
+  get isReady() {
+    return this.audio.readyState >= 2;
+  }
+}
+
+class NceApp {
+  constructor() {
+    this.books = [];
+    this.units = [];
+    this.bookKey = '';
+    this.unitIdx = -1;
+    this.lyrics = [];
+    this.activeLineIdx = -1;
+
+    this.els = {
+      bookSelector: document.getElementById('bookSelector'),
+      unitGrid: document.getElementById('unitGrid'),
+      playerDialog: document.getElementById('playerDialog'),
+      closePlayerBtn: document.getElementById('closePlayerBtn'),
+      playerTitle: document.getElementById('playerTitle'),
+      prevUnitBtn: document.getElementById('prevUnitBtn'),
+      nextUnitBtn: document.getElementById('nextUnitBtn'),
+      lyricsContainer: document.getElementById('lyricsContainer'),
+      playPauseBtn: document.getElementById('playPauseBtn'),
+      progressTrack: document.getElementById('progressTrack'),
+      progressFill: document.getElementById('progressFill'),
+      progressThumb: document.getElementById('progressThumb'),
+      currentTime: document.getElementById('currentTime'),
+      duration: document.getElementById('duration'),
+      speedBtn: document.getElementById('speedBtn'),
+      speedLabel: document.getElementById('speedLabel'),
+      modeBtn: document.getElementById('modeBtn'),
+      translateBtn: document.getElementById('translateBtn'),
+      audioEngine: document.getElementById('audioEngine')
+    };
+
+    this.engine = new PlaybackEngine(this.els.audioEngine);
+    this.engine.onAdvance = () => this._playNextLine();
+
+    this._lrcCache = new Map();
+    this._translationState = localStorage.getItem(STORAGE_KEYS.TRANSLATION) || 'show';
+    this._applyTranslationState();
+    this._syncSpeedDisplay();
+    this._syncModeDisplay();
+  }
+
+  async bootstrap() {
+    await this._loadBooks();
+    this._restoreBookSelection();
+    this._bindEvents();
+  }
+
+  async _loadBooks() {
+    try {
+      const resp = await fetch('data.json');
+      const data = await resp.json();
+      this.books = data.books || [];
+    } catch (err) {
+      console.error('Failed to load book catalog:', err);
+      this.books = [];
+    }
+  }
+
+  _restoreBookSelection() {
+    const stored = localStorage.getItem(STORAGE_KEYS.BOOK);
+    const key = stored || this.books[0]?.key || '';
+    if (key) this._switchBook(key);
+  }
+
+  _switchBook(key) {
+    this.bookKey = key;
+    localStorage.setItem(STORAGE_KEYS.BOOK, key);
+    this.els.bookSelector.value = key;
+    this._renderBookOptions();
+    this._loadUnitList();
+  }
+
+  _renderBookOptions() {
+    this.els.bookSelector.innerHTML = this.books
+      .map((b) => `<option value="${b.key}">${b.title}</option>`)
+      .join('');
+    this.els.bookSelector.value = this.bookKey;
+  }
+
+  async _loadUnitList() {
+    try {
+      const resp = await fetch(`${REMOTE_BASE[this.bookKey]}/book.json`);
+      const data = await resp.json();
+      this.units = data.units || [];
+      this._renderUnitGrid();
+      this._restoreLastUnit();
+    } catch (err) {
+      console.error('Failed to load units:', err);
+      this.units = [];
+    }
+  }
+
+  _renderUnitGrid() {
+    this.els.unitGrid.innerHTML = this.units
+      .map((u, i) => `
+        <article class="unit-card" data-index="${i}" tabindex="0" role="button" aria-label="${u.title}">
+          <span class="unit-number">${String(i + 1).padStart(2, '0')}</span>
+          <span class="unit-name">${u.title}</span>
+        </article>
+      `)
       .join('');
   }
 
-  async loadUnitFromStorage() {
-    if (!this.state.units.length) return;
-
-    const stored = localStorage.getItem(`${this.state.bookPath}/currentUnitIndex`);
-    const parsed = stored ? parseInt(stored) : 0;
-    const safeIndex = Number.isFinite(parsed)
-      ? clamp(parsed, 0, this.state.units.length - 1)
-      : 0;
-
-    await this.loadUnitByIndex(safeIndex, { shouldScrollUnitIntoView: true });
+  _restoreLastUnit() {
+    const saved = localStorage.getItem(STORAGE_KEYS.UNIT_INDEX(this.bookKey));
+    const idx = saved ? parseInt(saved, 10) : 0;
+    const safe = Math.min(Math.max(0, idx), this.units.length - 1);
+    if (this.units.length > 0) {
+      this._openUnit(safe);
+    }
   }
 
-  async loadUnitByIndex(unitIndex, options = {}) {
-    const { shouldScrollUnitIntoView = false } = options;
+  async _openUnit(index) {
+    this.unitIdx = index;
+    this.activeLineIdx = -1;
+    localStorage.setItem(STORAGE_KEYS.UNIT_INDEX(this.bookKey), index);
 
-    this.state.currentUnitIndex = unitIndex;
-    localStorage.setItem(`${this.state.bookPath}/currentUnitIndex`, unitIndex);
+    const unit = this.units[index];
+    this.els.playerTitle.textContent = unit.title;
+    this._updateNavButtons();
+    this._highlightCard(index);
 
-    const unit = this.state.units[unitIndex];
-    if (!unit) return;
+    this._resetPlayer();
 
-    this.resetPlayer();
-    this.updateActiveUnit(unitIndex, { shouldScrollUnitIntoView });
-    this.updateNavigationButtons();
+    const localLrc = AudioResolver.buildLocal(this.bookKey, unit.filename, 'lrc');
+    const remoteLrc = AudioResolver.buildRemote(this.bookKey, unit.filename, 'lrc');
+
+    let lrcText = this._lrcCache.get(localLrc);
+    if (!lrcText) {
+      try {
+        const resp = await fetch(localLrc);
+        if (!resp.ok) throw new Error('Not found');
+        lrcText = await resp.text();
+      } catch {
+        const resp = await fetch(remoteLrc);
+        lrcText = await resp.text();
+      }
+      this._lrcCache.set(localLrc, lrcText);
+    }
+
+    this.lyrics = LrcProcessor.decode(lrcText);
+    this._renderLyrics();
+
+    const localAudio = AudioResolver.buildLocal(this.bookKey, unit.filename, 'mp3');
+    const remoteAudio = AudioResolver.buildRemote(this.bookKey, unit.filename, 'mp3');
 
     try {
-      let lrcText = this.lrcCache.get(unit.lrc.local);
-      if (!lrcText) {
-        let lrcUrl = unit.lrc.local;
-        try {
-          const localResponse = await fetch(lrcUrl);
-          if (!localResponse.ok) throw new Error('Local LRC not found');
-          lrcText = await localResponse.text();
-        } catch {
-          lrcUrl = unit.lrc.remote;
-          const response = await fetch(lrcUrl);
-          lrcText = await response.text();
-        }
-        this.lrcCache.set(unit.lrc.local, lrcText);
-      }
-      this.state.currentLyrics = LRCParser.parse(lrcText);
-      this.renderLyrics();
-    } catch (error) {
-      console.error('加载歌词失败:', error);
-      if (this.dom.lyricsDisplay) {
-        this.dom.lyricsDisplay.innerHTML = '<p class="placeholder">加载失败</p>';
-      }
+      await this.engine.load(localAudio, remoteAudio);
+    } catch {
+      console.warn('Audio load failed');
     }
 
-    if (this.dom.audioPlayer) {
-      this.setPlayButtonDisabled(true);
-      this.loadAudioWithFallback(unit.audio);
-    }
-
-    this.loadPlayTime();
-    this.loadSavedSpeed();
-    this.prefetchUnit(unitIndex + 1);
-
-    this.openPlayerView();
-    history.replaceState(null, '', `#unit/${unitIndex}`);
+    this._restorePlayTime();
+    this._prefetchNeighbor(index + 1);
+    this._showPlayer();
   }
 
-  loadAudioWithFallback(audioUrls) {
-    const audioPlayer = this.dom.audioPlayer;
-    if (!audioPlayer) return;
-
-    audioPlayer.src = audioUrls.local;
-    audioPlayer.load();
-
-    audioPlayer.onerror = () => {
-      console.warn('本地音频加载失败，回退到远程:', audioUrls.remote);
-      audioPlayer.onerror = null;
-      audioPlayer.src = audioUrls.remote;
-      audioPlayer.load();
-    };
+  _resetPlayer() {
+    this.engine.pause();
+    this.engine.seekTo(0);
+    this.engine.clearBoundary();
+    this._updatePlayButton();
+    this._updateProgress(0);
   }
 
-  resetPlayer() {
-    if (this.dom.audioPlayer) {
-      this.dom.audioPlayer.pause();
-      this.dom.audioPlayer.currentTime = 0;
-    }
-
-    this.setPlayButtonDisabled(true);
-
-    if (this.dom.progressBar) this.dom.progressBar.style.setProperty('--progress', '0%');
-    if (this.dom.currentTime) this.dom.currentTime.textContent = '0:00';
-    if (this.dom.duration) this.dom.duration.textContent = '0:00';
-
-    this.updatePlayButton();
-    this.state.currentLyricIndex = -1;
-    this.state.singlePlayEndTime = null;
-  }
-
-  updateActiveUnit(unitIndex, options = {}) {
-    const { shouldScrollUnitIntoView = false } = options;
-
-    if (this.dom.unitList) {
-      let activeItem = null;
-
-      this.dom.unitList.querySelectorAll('.unit-card').forEach((item, index) => {
-        if (index === unitIndex) {
-          item.classList.add('active');
-          activeItem = item;
-        } else {
-          item.classList.remove('active');
-        }
-      });
-
-      if (activeItem && shouldScrollUnitIntoView) {
-        activeItem.scrollIntoView({ block: 'center', inline: 'nearest' });
+  _restorePlayTime() {
+    const key = STORAGE_KEYS.PLAY_TIME(this.bookKey, this.unitIdx);
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const t = parseFloat(saved);
+      if (isFinite(t) && t > 0) {
+        this.engine.seekTo(Math.min(t, this.engine.duration - 0.1));
       }
     }
   }
 
-  openPlayerView() {
-    if (!this.dom.playerView || !this.dom.homeView) return;
-    this.dom.homeView.classList.add('hidden');
-    this.dom.playerView.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    if (this.dom.playerTitle && this.state.units[this.state.currentUnitIndex]) {
-      this.dom.playerTitle.textContent = this.state.units[this.state.currentUnitIndex].title;
-    }
-  }
-
-  closePlayerView() {
-    if (!this.dom.playerView || !this.dom.homeView) return;
-    this.dom.playerView.classList.add('hidden');
-    this.dom.homeView.classList.remove('hidden');
-    document.body.style.overflow = '';
-  }
-
-  renderLyrics() {
-    if (!this.dom.lyricsDisplay) return;
-
-    if (this.dom.lyricsContainer) {
-      this.dom.lyricsContainer.scrollTop = 0;
-    }
-
-    if (!this.state.currentLyrics.length) {
-      this.dom.lyricsDisplay.innerHTML = '<p class="placeholder">没有歌词数据</p>';
+  _renderLyrics() {
+    if (this.lyrics.length === 0) {
+      this.els.lyricsContainer.innerHTML = '<p class="lyric-entry"><span class="lyric-en">No lyrics available</span></p>';
       return;
     }
 
-    this.dom.lyricsDisplay.innerHTML = this.state.currentLyrics
-      .map(
-        (lyric, index) => `
-      <div class="lyric-line" data-index="${index}" data-time="${lyric.time}" tabindex="0" role="button" aria-label="播放第 ${index + 1} 句">
-        <div class="lyric-text">${lyric.english}</div>
-        ${lyric.chinese ? `<div class="lyric-translation">${lyric.chinese}</div>` : ''}
-      </div>
-    `
-      )
+    this.els.lyricsContainer.innerHTML = this.lyrics
+      .map((line, i) => `
+        <div class="lyric-entry" data-line="${i}" data-time="${line.time}">
+          <div class="lyric-en">${line.en}</div>
+          ${line.cn ? `<div class="lyric-cn">${line.cn}</div>` : ''}
+        </div>
+      `)
       .join('');
 
-    this.lyricLineEls = qsa('.lyric-line', this.dom.lyricsDisplay);
-    this.state.currentLyricIndex = -1;
+    this.els.lyricsContainer.scrollTop = 0;
   }
 
-  handleLyricActivate(line) {
-    const index = parseInt(line.dataset.index);
-    const time = parseFloat(line.dataset.time);
-    this.playLyricAtIndex(index, time);
-    this.persistPlayTime(time);
+  _highlightCard(index) {
+    this.els.unitGrid.querySelectorAll('.unit-card').forEach((card, i) => {
+      card.classList.toggle('active', i === index);
+    });
   }
 
-  playLyricAtIndex(index, time) {
-    if (!this.dom.audioPlayer) return;
+  _updateNavButtons() {
+    this.els.prevUnitBtn.disabled = this.unitIdx <= 0;
+    this.els.nextUnitBtn.disabled = this.unitIdx >= this.units.length - 1;
+  }
 
-    this.dom.audioPlayer.currentTime = time;
+  _showPlayer() {
+    this.els.playerDialog.showModal();
+  }
 
-    if (this.state.playMode === 'single') {
-      const nextLyric = this.state.currentLyrics[index + 1];
-      this.state.singlePlayEndTime = nextLyric ? nextLyric.time : this.dom.audioPlayer.duration;
+  _hidePlayer() {
+    this.els.playerDialog.close();
+    this.engine.pause();
+  }
+
+  _playLine(index) {
+    if (index < 0 || index >= this.lyrics.length) return;
+
+    const line = this.lyrics[index];
+    this.engine.seekTo(line.time);
+
+    if (this.engine.mode === 'single') {
+      const nextLine = this.lyrics[index + 1];
+      this.engine.setBoundary(nextLine ? nextLine.time : this.engine.duration);
     } else {
-      this.state.singlePlayEndTime = null;
+      this.engine.clearBoundary();
     }
 
-    this.dom.audioPlayer.play();
+    this.engine.play();
+    this._persistPlayTime(line.time);
   }
 
-  persistPlayTime(time) {
-    localStorage.setItem(`${this.state.bookPath}/${this.state.currentUnitIndex}/playTime`, time);
-  }
-
-  checkSinglePlayEnd() {
-    if (this.state.playMode !== 'single' || this.state.singlePlayEndTime === null || !this.dom.audioPlayer) {
-      return;
-    }
-
-    const currentTime = this.dom.audioPlayer.currentTime;
-    if (currentTime >= this.state.singlePlayEndTime && this.state.singlePlayEndTime !== this.dom.audioPlayer.duration) {
-      this.dom.audioPlayer.pause();
-      this.dom.audioPlayer.currentTime = this.state.singlePlayEndTime - 0.01;
-      this.state.singlePlayEndTime = null;
+  _playNextLine() {
+    const next = this.activeLineIdx + 1;
+    if (next < this.lyrics.length) {
+      this._playLine(next);
     }
   }
 
-  updateProgress() {
-    if (!this.dom.progressBar || !this.dom.audioPlayer) return;
+  _updateActiveLine() {
+    if (this.lyrics.length === 0 || !this.engine.isReady) return;
 
-    if (this.dom.audioPlayer.duration && !this.state.isProgressDragging) {
-      const percent = (this.dom.audioPlayer.currentTime / this.dom.audioPlayer.duration) * 100;
-      this.dom.progressBar.style.setProperty('--progress', `${percent}%`);
-      if (this.dom.currentTime) {
-        this.dom.currentTime.textContent = this.formatTime(this.dom.audioPlayer.currentTime);
-      }
-    }
-  }
+    const now = this.engine.currentTime;
+    let newIdx = -1;
 
-  updateDuration() {
-    if (!this.dom.audioPlayer) return;
-
-    if (this.dom.duration) {
-      this.dom.duration.textContent = this.formatTime(this.dom.audioPlayer.duration);
-    }
-    if (this.state.savedPlayTime > 0 && this.dom.audioPlayer.duration) {
-      this.dom.audioPlayer.currentTime = Math.min(this.state.savedPlayTime, this.dom.audioPlayer.duration - 0.1);
-      this.state.savedPlayTime = 0;
-      this.updateProgress();
-    }
-  }
-
-  updatePlayButton() {
-    if (!this.dom.playPauseBtn || !this.dom.audioPlayer) return;
-
-    if (this.dom.audioPlayer.paused) {
-      this.dom.playPauseBtn.classList.remove('playing');
-    } else {
-      this.dom.playPauseBtn.classList.add('playing');
-    }
-  }
-
-  setPlayButtonDisabled(disabled) {
-    if (!this.dom.playPauseBtn) return;
-    this.dom.playPauseBtn.disabled = disabled;
-    this.dom.playPauseBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-  }
-
-  formatTime(seconds) {
-    if (isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  cyclePlaybackSpeed() {
-    const currentIndex = this.state.availableSpeeds.indexOf(this.state.playbackRate);
-    const nextIndex = (currentIndex + 1) % this.state.availableSpeeds.length;
-    this.state.playbackRate = this.state.availableSpeeds[nextIndex];
-
-    if (this.dom.audioPlayer) {
-      this.dom.audioPlayer.playbackRate = this.state.playbackRate;
-    }
-
-    this.updateSpeedButton();
-    localStorage.setItem('playbackRate', this.state.playbackRate);
-  }
-
-  updateSpeedButton() {
-    if (!this.dom.speedText || !this.dom.speedBtn) return;
-
-    this.dom.speedText.textContent = `${this.state.playbackRate}x`;
-
-    if (this.state.playbackRate !== 1.0) {
-      this.dom.speedBtn.classList.add('active');
-    } else {
-      this.dom.speedBtn.classList.remove('active');
-    }
-  }
-
-  loadPlayTime() {
-    const time = localStorage.getItem(`${this.state.bookPath}/${this.state.currentUnitIndex}/playTime`);
-    if (time) {
-      const parsed = parseFloat(time);
-      if (Number.isFinite(parsed)) {
-        this.state.savedPlayTime = parsed;
-      }
-    }
-  }
-
-  loadSavedSpeed() {
-    const savedSpeed = localStorage.getItem('playbackRate');
-    if (savedSpeed) {
-      const parsed = parseFloat(savedSpeed);
-      if (!Number.isFinite(parsed)) return;
-      this.state.playbackRate = parsed;
-      if (this.dom.audioPlayer) {
-        this.dom.audioPlayer.playbackRate = this.state.playbackRate;
-      }
-      this.updateSpeedButton();
-    }
-  }
-
-  updateNavigationButtons() {
-    if (this.dom.prevUnitBtn) {
-      this.dom.prevUnitBtn.disabled = this.state.currentUnitIndex <= 0;
-    }
-
-    if (this.dom.nextUnitBtn) {
-      this.dom.nextUnitBtn.disabled = this.state.currentUnitIndex >= this.state.units.length - 1;
-    }
-  }
-
-  loadPreviousUnit() {
-    if (this.state.currentUnitIndex > 0) {
-      this.loadUnitByIndex(this.state.currentUnitIndex - 1);
-    }
-  }
-
-  loadNextUnit() {
-    if (this.state.currentUnitIndex < this.state.units.length - 1) {
-      this.loadUnitByIndex(this.state.currentUnitIndex + 1);
-    }
-  }
-
-  togglePlayMode() {
-    this.state.playMode = this.state.playMode === 'single' ? 'continuous' : 'single';
-    localStorage.setItem(PLAY_MODE_STORAGE_KEY, this.state.playMode);
-    this.updatePlayModeUI();
-  }
-
-  updatePlayModeUI() {
-    if (!this.dom.playModeBtn) return;
-
-    if (this.state.playMode === 'single') {
-      this.dom.playModeBtn.title = '单句点读';
-      this.dom.playModeBtn.setAttribute('aria-label', '单句点读');
-      this.dom.playModeBtn.setAttribute('aria-pressed', 'false');
-      this.dom.playModeBtn.dataset.mode = 'single';
-      this.dom.playModeBtn.classList.remove('continuous-mode');
-    } else {
-      this.dom.playModeBtn.title = '连续点读';
-      this.dom.playModeBtn.setAttribute('aria-label', '连续点读');
-      this.dom.playModeBtn.setAttribute('aria-pressed', 'true');
-      this.dom.playModeBtn.dataset.mode = 'continuous';
-      this.dom.playModeBtn.classList.add('continuous-mode');
-    }
-  }
-
-  loadPlayModePreference() {
-    const storedMode = localStorage.getItem(PLAY_MODE_STORAGE_KEY);
-    if (storedMode === 'single' || storedMode === 'continuous') {
-      this.state.playMode = storedMode;
-    }
-  }
-
-  handleAudioEnded() {
-    if (this.state.playMode === 'continuous') {
-      this.playNextLyric();
-    }
-  }
-
-  playNextLyric() {
-    const nextIndex = this.state.currentLyricIndex + 1;
-    if (nextIndex < this.state.currentLyrics.length && this.dom.audioPlayer) {
-      const nextLyric = this.state.currentLyrics[nextIndex];
-      this.dom.audioPlayer.currentTime = nextLyric.time;
-      this.dom.audioPlayer.play();
-    }
-  }
-
-  updateLyricHighlight() {
-    if (!this.lyricLineEls.length || !this.dom.audioPlayer) return;
-
-    const currentTime = this.dom.audioPlayer.currentTime;
-    let newIndex = -1;
-    for (let i = this.state.currentLyrics.length - 1; i >= 0; i--) {
-      if (currentTime >= this.state.currentLyrics[i].time) {
-        newIndex = i;
+    for (let i = this.lyrics.length - 1; i >= 0; i--) {
+      if (now >= this.lyrics[i].time) {
+        newIdx = i;
         break;
       }
     }
 
-    if (newIndex === this.state.currentLyricIndex) return;
+    if (newIdx === this.activeLineIdx) return;
 
-    if (this.state.currentLyricIndex >= 0 && this.lyricLineEls[this.state.currentLyricIndex]) {
-      this.lyricLineEls[this.state.currentLyricIndex].classList.remove('active');
-      this.lyricLineEls[this.state.currentLyricIndex].classList.remove('pulse');
-    }
+    this.activeLineIdx = newIdx;
 
-    this.state.currentLyricIndex = newIndex;
+    const entries = this.els.lyricsContainer.querySelectorAll('.lyric-entry');
+    entries.forEach((el, i) => {
+      el.classList.toggle('active', i === newIdx);
+    });
 
-    if (newIndex >= 0) {
-      const activeLine = this.lyricLineEls[newIndex];
-      if (activeLine) {
-        activeLine.classList.add('active');
-        activeLine.classList.add('pulse');
-        if (this.shouldScrollLyricIntoView(activeLine)) {
-          activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+    if (newIdx >= 0 && entries[newIdx]) {
+      const container = this.els.lyricsContainer;
+      const rect = container.getBoundingClientRect();
+      const lineRect = entries[newIdx].getBoundingClientRect();
+      const topLimit = rect.top + rect.height * 0.25;
+      const bottomLimit = rect.bottom - rect.height * 0.25;
+
+      if (lineRect.top < topLimit || lineRect.bottom > bottomLimit) {
+        entries[newIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
   }
 
-  prefetchUnit(unitIndex) {
-    const unit = this.state.units[unitIndex];
+  _updateProgress() {
+    if (this.engine.duration === 0) return;
+    const pct = (this.engine.currentTime / this.engine.duration) * 100;
+    this.els.progressFill.style.width = `${pct}%`;
+    this.els.progressThumb.style.left = `${pct}%`;
+    this.els.currentTime.textContent = this._formatTime(this.engine.currentTime);
+  }
+
+  _updateDuration() {
+    this.els.duration.textContent = this._formatTime(this.engine.duration);
+  }
+
+  _updatePlayButton() {
+    this.els.playPauseBtn.classList.toggle('playing', !this.engine.paused);
+  }
+
+  _syncSpeedDisplay() {
+    this.els.speedLabel.textContent = `${this.engine.speed}x`;
+  }
+
+  _syncModeDisplay() {
+    this.els.modeBtn.dataset.mode = this.engine.mode;
+  }
+
+  _applyTranslationState() {
+    document.body.classList.remove('hide-cn', 'blur-cn');
+    if (this._translationState === 'hide') {
+      document.body.classList.add('hide-cn');
+    } else if (this._translationState === 'blur') {
+      document.body.classList.add('blur-cn');
+    }
+  }
+
+  _persistPlayTime(time) {
+    localStorage.setItem(STORAGE_KEYS.PLAY_TIME(this.bookKey, this.unitIdx), time);
+  }
+
+  _formatTime(seconds) {
+    if (!isFinite(seconds)) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  async _prefetchNeighbor(index) {
+    const unit = this.units[index];
     if (!unit) return;
 
-    if (unit.lrc && !this.lrcCache.has(unit.lrc.local)) {
-      fetch(unit.lrc.local)
-        .then((response) => {
-          if (!response.ok) throw new Error('Local LRC not found');
-          return response.text();
-        })
-        .then((text) => this.lrcCache.set(unit.lrc.local, text))
+    const localLrc = AudioResolver.buildLocal(this.bookKey, unit.filename, 'lrc');
+    if (!this._lrcCache.has(localLrc)) {
+      fetch(localLrc)
+        .then((r) => r.ok ? r.text() : Promise.reject())
+        .then((t) => this._lrcCache.set(localLrc, t))
         .catch(() => {
-          fetch(unit.lrc.remote)
-            .then((response) => response.text())
-            .then((text) => this.lrcCache.set(unit.lrc.local, text))
+          fetch(AudioResolver.buildRemote(this.bookKey, unit.filename, 'lrc'))
+            .then((r) => r.text())
+            .then((t) => this._lrcCache.set(localLrc, t))
             .catch(() => {});
         });
     }
-
-    if (unit.audio && !this.audioPreload.has(unit.audio.local)) {
-      const audio = new Audio();
-      audio.preload = 'auto';
-      audio.src = unit.audio.local;
-      audio.onerror = () => {
-        audio.onerror = null;
-        audio.src = unit.audio.remote;
-      };
-      this.audioPreload.set(unit.audio.local, audio);
-    }
   }
 
-  shouldScrollLyricIntoView(activeLine) {
-    if (!this.dom.lyricsContainer) return true;
-    const containerRect = this.dom.lyricsContainer.getBoundingClientRect();
-    const lineRect = activeLine.getBoundingClientRect();
-    const topThreshold = containerRect.top + containerRect.height * 0.22;
-    const bottomThreshold = containerRect.bottom - containerRect.height * 0.22;
-    return lineRect.top < topThreshold || lineRect.bottom > bottomThreshold;
-  }
-
-  bindEvents() {
-    this.bindBookSelects();
-    this.bindUnitList();
-    this.bindLyrics();
-    this.bindPlayerControls();
-    this.bindNavigation();
-    this.bindTranslationToggle();
-    this.bindPlayerModal();
-
-    window.addEventListener('hashchange', () => {
-      const hash = location.hash.slice(1).trim();
-      if (hash.startsWith('unit/')) {
-        const unitIndex = parseInt(hash.split('/')[1]);
-        if (Number.isFinite(unitIndex)) {
-          this.loadUnitByIndex(unitIndex);
-          return;
-        }
-      }
-      const newKey = hash || DEFAULT_BOOK_KEY;
-      if (newKey === this.state.bookKey) return;
-      this.applyBookChange(newKey).then(() => this.loadUnitFromStorage());
+  _bindEvents() {
+    this.els.bookSelector.addEventListener('change', (e) => {
+      if (e.target.value) this._switchBook(e.target.value);
     });
 
-    const initialHash = location.hash.slice(1).trim();
-    if (initialHash.startsWith('unit/')) {
-      const unitIndex = parseInt(initialHash.split('/')[1]);
-      if (Number.isFinite(unitIndex)) {
-        this.loadUnitFromStorage().then(() => {
-          this.loadUnitByIndex(unitIndex);
-        });
-        return;
-      }
-    }
-    this.loadUnitFromStorage();
-  }
-
-  bindPlayerModal() {
-    if (!this.dom.playerBackBtn) return;
-    this.dom.playerBackBtn.addEventListener('click', () => {
-      this.closePlayerView();
-      history.replaceState(null, '', '#list');
+    this.els.unitGrid.addEventListener('click', (e) => {
+      const card = e.target.closest('.unit-card');
+      if (!card) return;
+      this._openUnit(parseInt(card.dataset.index, 10));
     });
 
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && !this.dom.playerView.classList.contains('hidden')) {
-        this.closePlayerView();
-        history.replaceState(null, '', '#list');
-      }
-    });
-  }
-
-  bindTranslationToggle() {
-    if (!this.dom.toggleTranslationBtn) return;
-    this.dom.toggleTranslationBtn.addEventListener('click', () => {
-      const modes = ['show', 'hide', 'blur'];
-      const currentIndex = modes.indexOf(this.state.translationMode);
-      const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % modes.length;
-      this.state.translationMode = modes[nextIndex];
-      localStorage.setItem('translationMode', this.state.translationMode);
-      this.updateTranslationToggle();
-    });
-  }
-
-  loadTranslationPreference() {
-    const storedMode = localStorage.getItem('translationMode');
-    if (storedMode === 'show' || storedMode === 'hide' || storedMode === 'blur') {
-      this.state.translationMode = storedMode;
-    }
-  }
-
-  updateTranslationToggle() {
-    if (!this.dom.toggleTranslationBtn) return;
-    const mode = this.state.translationMode;
-    document.body.classList.toggle('hide-translation', mode === 'hide');
-    document.body.classList.toggle('blur-translation', mode === 'blur');
-
-    if (mode === 'show') {
-      this.dom.toggleTranslationBtn.textContent = '中';
-      this.dom.toggleTranslationBtn.setAttribute('aria-pressed', 'true');
-      this.dom.toggleTranslationBtn.setAttribute('aria-label', '翻译显示');
-    } else if (mode === 'blur') {
-      this.dom.toggleTranslationBtn.textContent = '模';
-      this.dom.toggleTranslationBtn.setAttribute('aria-pressed', 'mixed');
-      this.dom.toggleTranslationBtn.setAttribute('aria-label', '翻译模糊显示');
-    } else {
-      this.dom.toggleTranslationBtn.textContent = '英';
-      this.dom.toggleTranslationBtn.setAttribute('aria-pressed', 'false');
-      this.dom.toggleTranslationBtn.setAttribute('aria-label', '仅显示英文');
-    }
-  }
-
-  bindBookSelects() {
-    if (this.bookSelectsBound || !this.dom.bookSelects.length) return;
-    this.bookSelectsBound = true;
-
-    this.dom.bookSelects.forEach((select) => {
-      select.addEventListener('change', (event) => {
-        const target = event.target;
-        if (!target.value) return;
-        if (location.hash.slice(1) === target.value) return;
-        location.hash = target.value;
-      });
-    });
-  }
-
-  bindUnitList() {
-    if (this.unitListBound || !this.dom.unitList) return;
-    this.unitListBound = true;
-
-    this.dom.unitList.addEventListener('click', (event) => {
-      const item = event.target.closest('.unit-card');
-      if (!item) return;
-      const unitIndex = parseInt(item.dataset.unitIndex);
-      this.loadUnitByIndex(unitIndex);
+    this.els.unitGrid.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.unit-card');
+      if (!card) return;
+      e.preventDefault();
+      this._openUnit(parseInt(card.dataset.index, 10));
     });
 
-    this.dom.unitList.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      const item = event.target.closest('.unit-card');
-      if (!item) return;
-      event.preventDefault();
-      const unitIndex = parseInt(item.dataset.unitIndex);
-      this.loadUnitByIndex(unitIndex);
-    });
-  }
+    this.els.closePlayerBtn.addEventListener('click', () => this._hidePlayer());
 
-  bindLyrics() {
-    if (this.lyricsBound || !this.dom.lyricsDisplay) return;
-    this.lyricsBound = true;
-
-    this.dom.lyricsDisplay.addEventListener('click', (event) => {
-      const line = event.target.closest('.lyric-line');
-      if (!line) return;
-      this.handleLyricActivate(line);
+    this.els.playerDialog.addEventListener('click', (e) => {
+      if (e.target === this.els.playerDialog) this._hidePlayer();
     });
 
-    this.dom.lyricsDisplay.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      const line = event.target.closest('.lyric-line');
-      if (!line) return;
-      event.preventDefault();
-      this.handleLyricActivate(line);
+    this.els.prevUnitBtn.addEventListener('click', () => {
+      if (this.unitIdx > 0) this._openUnit(this.unitIdx - 1);
     });
-  }
 
-  bindPlayerControls() {
-    if (
-      !this.dom.playPauseBtn ||
-      !this.dom.speedBtn ||
-      !this.dom.progressBar ||
-      !this.dom.audioPlayer ||
-      !this.dom.playModeBtn
-    ) {
-      return;
-    }
+    this.els.nextUnitBtn.addEventListener('click', () => {
+      if (this.unitIdx < this.units.length - 1) this._openUnit(this.unitIdx + 1);
+    });
 
-    this.dom.playPauseBtn.addEventListener('click', () => {
-      if (this.dom.audioPlayer.paused) {
-        this.dom.audioPlayer.play();
-      } else {
-        this.dom.audioPlayer.pause();
+    this.els.lyricsContainer.addEventListener('click', (e) => {
+      const entry = e.target.closest('.lyric-entry');
+      if (!entry) return;
+      const idx = parseInt(entry.dataset.line, 10);
+      const time = parseFloat(entry.dataset.time);
+      this._playLine(idx);
+      this._persistPlayTime(time);
+    });
+
+    this.els.playPauseBtn.addEventListener('click', () => {
+      this.engine.toggle();
+    });
+
+    this.els.audioEngine.addEventListener('timeupdate', () => {
+      this._updateActiveLine();
+      this._updateProgress();
+    });
+
+    this.els.audioEngine.addEventListener('loadedmetadata', () => {
+      this._updateDuration();
+    });
+
+    this.els.audioEngine.addEventListener('canplay', () => {
+      this.els.playPauseBtn.disabled = false;
+      this._updatePlayButton();
+    });
+
+    this.els.audioEngine.addEventListener('play', () => this._updatePlayButton());
+    this.els.audioEngine.addEventListener('pause', () => {
+      this.engine.clearBoundary();
+      this._updatePlayButton();
+    });
+
+    this._setupProgressInteraction();
+
+    this.els.speedBtn.addEventListener('click', () => {
+      this.engine.cycleSpeed();
+      this._syncSpeedDisplay();
+    });
+
+    this.els.modeBtn.addEventListener('click', () => {
+      this.engine.toggleMode();
+      this._syncModeDisplay();
+    });
+
+    this.els.translateBtn.addEventListener('click', () => {
+      const states = ['show', 'hide', 'blur'];
+      const cur = states.indexOf(this._translationState);
+      this._translationState = states[(cur + 1) % states.length];
+      localStorage.setItem(STORAGE_KEYS.TRANSLATION, this._translationState);
+      this._applyTranslationState();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.els.playerDialog.open) {
+        this._hidePlayer();
       }
     });
+  }
 
-    this.dom.speedBtn.addEventListener('click', () => {
-      this.cyclePlaybackSpeed();
-    });
+  _setupProgressInteraction() {
+    const track = this.els.progressTrack;
 
-    const seekByClientX = (clientX) => {
-      if (!this.dom.audioPlayer.duration) return;
-      const rect = this.dom.progressBar.getBoundingClientRect();
-      const percent = clamp((clientX - rect.left) / rect.width, 0, 1);
-      this.dom.audioPlayer.currentTime = percent * this.dom.audioPlayer.duration;
+    const seek = (clientX) => {
+      if (this.engine.duration === 0) return;
+      const rect = track.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      this.engine.seekTo(pct * this.engine.duration);
     };
 
-    this.dom.progressBar.addEventListener('click', (event) => {
-      seekByClientX(event.clientX);
+    track.addEventListener('click', (e) => seek(e.clientX));
+
+    track.addEventListener('pointerdown', (e) => {
+      track.classList.add('dragging');
+      track.setPointerCapture(e.pointerId);
+      seek(e.clientX);
     });
 
-    this.dom.progressBar.addEventListener('pointerdown', (event) => {
-      this.state.isProgressDragging = true;
-      this.dom.progressBar.classList.add('dragging');
-      this.dom.progressBar.setPointerCapture(event.pointerId);
-      seekByClientX(event.clientX);
+    track.addEventListener('pointermove', (e) => {
+      if (!track.classList.contains('dragging')) return;
+      seek(e.clientX);
     });
 
-    this.dom.progressBar.addEventListener('pointermove', (event) => {
-      if (!this.state.isProgressDragging) return;
-      seekByClientX(event.clientX);
+    track.addEventListener('pointerup', () => {
+      track.classList.remove('dragging');
     });
 
-    this.dom.progressBar.addEventListener('pointerup', (event) => {
-      this.state.isProgressDragging = false;
-      this.dom.progressBar.classList.remove('dragging');
-      this.dom.progressBar.releasePointerCapture(event.pointerId);
+    track.addEventListener('pointercancel', () => {
+      track.classList.remove('dragging');
     });
-
-    this.dom.progressBar.addEventListener('pointercancel', () => {
-      this.state.isProgressDragging = false;
-      this.dom.progressBar.classList.remove('dragging');
-    });
-
-    this.dom.progressBar.addEventListener('pointerleave', () => {
-      this.state.isProgressDragging = false;
-      this.dom.progressBar.classList.remove('dragging');
-    });
-
-    this.dom.playModeBtn.addEventListener('click', () => {
-      this.togglePlayMode();
-    });
-
-    this.dom.audioPlayer.addEventListener('timeupdate', () => {
-      this.checkSinglePlayEnd();
-      this.updateLyricHighlight();
-      this.updateProgress();
-    });
-
-    this.dom.audioPlayer.addEventListener('loadedmetadata', () => {
-      this.updateDuration();
-    });
-
-    this.dom.audioPlayer.addEventListener('canplay', () => {
-      this.setPlayButtonDisabled(false);
-    });
-
-    this.dom.audioPlayer.addEventListener('loadstart', () => {
-      this.setPlayButtonDisabled(true);
-    });
-
-    this.dom.audioPlayer.addEventListener('ended', () => {
-      this.handleAudioEnded();
-      this.updatePlayButton();
-    });
-
-    this.dom.audioPlayer.addEventListener('play', () => {
-      this.updatePlayButton();
-    });
-
-    this.dom.audioPlayer.addEventListener('pause', () => {
-      this.state.singlePlayEndTime = null;
-      this.updatePlayButton();
-    });
-
-    this.dom.audioPlayer.addEventListener('error', () => {
-      this.setPlayButtonDisabled(true);
-    });
-  }
-
-  bindNavigation() {
-    if (this.dom.prevUnitBtn) {
-      this.dom.prevUnitBtn.addEventListener('click', () => {
-        this.loadPreviousUnit();
-      });
-    }
-
-    if (this.dom.nextUnitBtn) {
-      this.dom.nextUnitBtn.addEventListener('click', () => {
-        this.loadNextUnit();
-      });
-    }
   }
 }
 
-// 初始化系统
 document.addEventListener('DOMContentLoaded', () => {
-  new ReadingSystem();
-  initThemeToggle();
+  const app = new NceApp();
+  app.bootstrap();
 });
-
-// 主题切换功能
-function initThemeToggle() {
-  const themeToggle = document.getElementById('themeToggle');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-  if (!themeToggle) return;
-
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'dark' || (!savedTheme && prefersDark.matches)) {
-    document.body.classList.add('dark-theme');
-  }
-
-  themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-theme');
-    const isDark = document.body.classList.contains('dark-theme');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-
-    themeToggle.style.transform = 'rotate(360deg)';
-    setTimeout(() => {
-      themeToggle.style.transform = '';
-    }, 300);
-  });
-
-  prefersDark.addEventListener('change', (event) => {
-    if (!localStorage.getItem('theme')) {
-      if (event.matches) {
-        document.body.classList.add('dark-theme');
-      } else {
-        document.body.classList.remove('dark-theme');
-      }
-    }
-  });
-}
-
-// LRC 解析器
-class LRCParser {
-  static parse(lrcText) {
-    const lines = lrcText.split('\n');
-    const lyrics = [];
-
-    for (const line of lines) {
-      const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.+)/);
-      if (match) {
-        const minutes = parseInt(match[1]);
-        const seconds = parseInt(match[2]);
-        const milliseconds = parseInt(match[3]);
-        const time = minutes * 60 + seconds + milliseconds / 1000 - 0.5;
-
-        // 分割英文和中文（使用 | 分隔符）
-        const text = match[4].trim();
-        const parts = text.split('|').map((p) => p.trim());
-
-        lyrics.push({
-          time,
-          english: parts[0] || '',
-          chinese: parts[1] || '',
-          fullText: text
-        });
-      }
-    }
-
-    return lyrics.sort((a, b) => a.time - b.time);
-  }
-}
