@@ -35,10 +35,8 @@ class ReadingSystem {
 
     this.dom = {
       audioPlayer: qs('#audioPlayer'),
-      lyricsDisplay: qs('#lyricsDisplay'),
-      lyricsContainer: qs('.lyrics-container'),
-      bookName: qs('#bookName'),
-      bookLevel: qs('#bookLevel'),
+      lyricsDisplay: qs('#playerLyrics'),
+      lyricsContainer: qs('.player-lyrics-area'),
       unitList: qs('#unitListContainer'),
       playModeBtn: qs('#playModeBtn'),
       playPauseBtn: qs('#playPauseBtn'),
@@ -47,16 +45,17 @@ class ReadingSystem {
       duration: qs('#duration'),
       speedBtn: qs('#speedBtn'),
       speedText: qs('#speedText'),
-      bookCover: qs('#bookCover'),
-      unitSelect: qs('#unitSelect'),
       bookSelects: qsa('.book-select'),
       prevUnitBtn: qs('#prevUnitBtn'),
       nextUnitBtn: qs('#nextUnitBtn'),
-      toggleTranslationBtn: qs('#toggleTranslationBtn')
+      toggleTranslationBtn: qs('#toggleTranslationBtn'),
+      homeView: qs('#homeView'),
+      playerView: qs('#playerView'),
+      playerBackBtn: qs('#playerBackBtn'),
+      playerTitle: qs('#playerTitle')
     };
 
     this.lyricLineEls = [];
-    this.unitSelectBound = false;
     this.unitListBound = false;
     this.bookSelectsBound = false;
     this.lyricsBound = false;
@@ -133,7 +132,6 @@ class ReadingSystem {
     this.updateBookSelects();
     await this.loadBookConfig();
     this.renderUnitList();
-    this.renderUnitSelect();
     this.resetUnitListScroll();
   }
 
@@ -154,6 +152,18 @@ class ReadingSystem {
     }
   }
 
+  buildAudioUrl(filename) {
+    const localPath = `./audio/${this.state.bookKey}/${filename}.mp3`;
+    const remoteUrl = `${this.state.bookPath}/${filename}.mp3`;
+    return { local: localPath, remote: remoteUrl };
+  }
+
+  buildLrcUrl(filename) {
+    const localPath = `./audio/${this.state.bookKey}/${filename}.lrc`;
+    const remoteUrl = `${this.state.bookPath}/${filename}.lrc`;
+    return { local: localPath, remote: remoteUrl };
+  }
+
   async loadBookConfig() {
     if (!this.state.bookPath) {
       this.renderEmptyState('未找到可用课本数据');
@@ -168,19 +178,10 @@ class ReadingSystem {
         ...unit,
         id: index + 1,
         title: unit.title,
-        audio: `${this.state.bookPath}/${unit.filename}.mp3`,
-        lrc: `${this.state.bookPath}/${unit.filename}.lrc`
+        audio: this.buildAudioUrl(unit.filename),
+        lrc: this.buildLrcUrl(unit.filename)
       }));
 
-      if (this.dom.bookName) {
-        this.dom.bookName.textContent = `《${data.bookName}》`;
-      }
-      if (this.dom.bookLevel) {
-        this.dom.bookLevel.textContent = `${data.bookLevel}`;
-      }
-      if (this.dom.bookCover && data.bookCover) {
-        this.dom.bookCover.src = `${this.state.bookPath}/${data.bookCover}`;
-      }
       this.lrcCache.clear();
       this.audioPreload.clear();
     } catch (error) {
@@ -211,22 +212,13 @@ class ReadingSystem {
     this.dom.unitList.innerHTML = this.state.units
       .map(
         (unit, index) => `
-      <div class="unit-item" data-unit-index="${index}" tabindex="0" role="button" aria-label="打开 ${unit.title}">
-        <h3>${unit.title}</h3>
+      <div class="unit-card" data-unit-index="${index}" tabindex="0" role="button" aria-label="打开 ${unit.title}">
+        <span class="unit-card-number">${String(index + 1).padStart(2, '0')}</span>
+        <span class="unit-card-title">${unit.title}</span>
       </div>
     `
       )
       .join('');
-  }
-
-  renderUnitSelect() {
-    if (!this.dom.unitSelect) return;
-
-    const options = this.state.units
-      .map((unit, index) => `<option value="${index}">${unit.title}</option>`)
-      .join('');
-
-    this.dom.unitSelect.innerHTML = `${options}`;
   }
 
   async loadUnitFromStorage() {
@@ -255,11 +247,19 @@ class ReadingSystem {
     this.updateNavigationButtons();
 
     try {
-      let lrcText = this.lrcCache.get(unit.lrc);
+      let lrcText = this.lrcCache.get(unit.lrc.local);
       if (!lrcText) {
-        const response = await fetch(unit.lrc);
-        lrcText = await response.text();
-        this.lrcCache.set(unit.lrc, lrcText);
+        let lrcUrl = unit.lrc.local;
+        try {
+          const localResponse = await fetch(lrcUrl);
+          if (!localResponse.ok) throw new Error('Local LRC not found');
+          lrcText = await localResponse.text();
+        } catch {
+          lrcUrl = unit.lrc.remote;
+          const response = await fetch(lrcUrl);
+          lrcText = await response.text();
+        }
+        this.lrcCache.set(unit.lrc.local, lrcText);
       }
       this.state.currentLyrics = LRCParser.parse(lrcText);
       this.renderLyrics();
@@ -272,13 +272,30 @@ class ReadingSystem {
 
     if (this.dom.audioPlayer) {
       this.setPlayButtonDisabled(true);
-      this.dom.audioPlayer.src = unit.audio;
-      this.dom.audioPlayer.load();
+      this.loadAudioWithFallback(unit.audio);
     }
 
     this.loadPlayTime();
     this.loadSavedSpeed();
     this.prefetchUnit(unitIndex + 1);
+
+    this.openPlayerView();
+    history.replaceState(null, '', `#unit/${unitIndex}`);
+  }
+
+  loadAudioWithFallback(audioUrls) {
+    const audioPlayer = this.dom.audioPlayer;
+    if (!audioPlayer) return;
+
+    audioPlayer.src = audioUrls.local;
+    audioPlayer.load();
+
+    audioPlayer.onerror = () => {
+      console.warn('本地音频加载失败，回退到远程:', audioUrls.remote);
+      audioPlayer.onerror = null;
+      audioPlayer.src = audioUrls.remote;
+      audioPlayer.load();
+    };
   }
 
   resetPlayer() {
@@ -304,7 +321,7 @@ class ReadingSystem {
     if (this.dom.unitList) {
       let activeItem = null;
 
-      this.dom.unitList.querySelectorAll('.unit-item').forEach((item, index) => {
+      this.dom.unitList.querySelectorAll('.unit-card').forEach((item, index) => {
         if (index === unitIndex) {
           item.classList.add('active');
           activeItem = item;
@@ -317,10 +334,23 @@ class ReadingSystem {
         activeItem.scrollIntoView({ block: 'center', inline: 'nearest' });
       }
     }
+  }
 
-    if (this.dom.unitSelect) {
-      this.dom.unitSelect.value = unitIndex;
+  openPlayerView() {
+    if (!this.dom.playerView || !this.dom.homeView) return;
+    this.dom.homeView.classList.add('hidden');
+    this.dom.playerView.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    if (this.dom.playerTitle && this.state.units[this.state.currentUnitIndex]) {
+      this.dom.playerTitle.textContent = this.state.units[this.state.currentUnitIndex].title;
     }
+  }
+
+  closePlayerView() {
+    if (!this.dom.playerView || !this.dom.homeView) return;
+    this.dom.playerView.classList.add('hidden');
+    this.dom.homeView.classList.remove('hidden');
+    document.body.style.overflow = '';
   }
 
   renderLyrics() {
@@ -590,18 +620,30 @@ class ReadingSystem {
     const unit = this.state.units[unitIndex];
     if (!unit) return;
 
-    if (unit.lrc && !this.lrcCache.has(unit.lrc)) {
-      fetch(unit.lrc)
-        .then((response) => response.text())
-        .then((text) => this.lrcCache.set(unit.lrc, text))
-        .catch(() => {});
+    if (unit.lrc && !this.lrcCache.has(unit.lrc.local)) {
+      fetch(unit.lrc.local)
+        .then((response) => {
+          if (!response.ok) throw new Error('Local LRC not found');
+          return response.text();
+        })
+        .then((text) => this.lrcCache.set(unit.lrc.local, text))
+        .catch(() => {
+          fetch(unit.lrc.remote)
+            .then((response) => response.text())
+            .then((text) => this.lrcCache.set(unit.lrc.local, text))
+            .catch(() => {});
+        });
     }
 
-    if (unit.audio && !this.audioPreload.has(unit.audio)) {
+    if (unit.audio && !this.audioPreload.has(unit.audio.local)) {
       const audio = new Audio();
       audio.preload = 'auto';
-      audio.src = unit.audio;
-      this.audioPreload.set(unit.audio, audio);
+      audio.src = unit.audio.local;
+      audio.onerror = () => {
+        audio.onerror = null;
+        audio.src = unit.audio.remote;
+      };
+      this.audioPreload.set(unit.audio.local, audio);
     }
   }
 
@@ -617,16 +659,51 @@ class ReadingSystem {
   bindEvents() {
     this.bindBookSelects();
     this.bindUnitList();
-    this.bindUnitSelect();
     this.bindLyrics();
     this.bindPlayerControls();
     this.bindNavigation();
     this.bindTranslationToggle();
+    this.bindPlayerModal();
 
     window.addEventListener('hashchange', () => {
-      const newKey = location.hash.slice(1).trim() || DEFAULT_BOOK_KEY;
+      const hash = location.hash.slice(1).trim();
+      if (hash.startsWith('unit/')) {
+        const unitIndex = parseInt(hash.split('/')[1]);
+        if (Number.isFinite(unitIndex)) {
+          this.loadUnitByIndex(unitIndex);
+          return;
+        }
+      }
+      const newKey = hash || DEFAULT_BOOK_KEY;
       if (newKey === this.state.bookKey) return;
       this.applyBookChange(newKey).then(() => this.loadUnitFromStorage());
+    });
+
+    const initialHash = location.hash.slice(1).trim();
+    if (initialHash.startsWith('unit/')) {
+      const unitIndex = parseInt(initialHash.split('/')[1]);
+      if (Number.isFinite(unitIndex)) {
+        this.loadUnitFromStorage().then(() => {
+          this.loadUnitByIndex(unitIndex);
+        });
+        return;
+      }
+    }
+    this.loadUnitFromStorage();
+  }
+
+  bindPlayerModal() {
+    if (!this.dom.playerBackBtn) return;
+    this.dom.playerBackBtn.addEventListener('click', () => {
+      this.closePlayerView();
+      history.replaceState(null, '', '#list');
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !this.dom.playerView.classList.contains('hidden')) {
+        this.closePlayerView();
+        history.replaceState(null, '', '#list');
+      }
     });
   }
 
@@ -689,7 +766,7 @@ class ReadingSystem {
     this.unitListBound = true;
 
     this.dom.unitList.addEventListener('click', (event) => {
-      const item = event.target.closest('.unit-item');
+      const item = event.target.closest('.unit-card');
       if (!item) return;
       const unitIndex = parseInt(item.dataset.unitIndex);
       this.loadUnitByIndex(unitIndex);
@@ -697,23 +774,11 @@ class ReadingSystem {
 
     this.dom.unitList.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
-      const item = event.target.closest('.unit-item');
+      const item = event.target.closest('.unit-card');
       if (!item) return;
       event.preventDefault();
       const unitIndex = parseInt(item.dataset.unitIndex);
       this.loadUnitByIndex(unitIndex);
-    });
-  }
-
-  bindUnitSelect() {
-    if (this.unitSelectBound || !this.dom.unitSelect) return;
-    this.unitSelectBound = true;
-
-    this.dom.unitSelect.addEventListener('change', (event) => {
-      const unitIndex = parseInt(event.target.value);
-      if (unitIndex >= 0) {
-        this.loadUnitByIndex(unitIndex);
-      }
     });
   }
 
@@ -858,7 +923,6 @@ class ReadingSystem {
 document.addEventListener('DOMContentLoaded', () => {
   new ReadingSystem();
   initThemeToggle();
-  initSupportModal();
 });
 
 // 主题切换功能
@@ -893,45 +957,6 @@ function initThemeToggle() {
     }
   });
 }
-
-function initSupportModal() {
-  const supportBtn = document.getElementById('supportBtn');
-  const supportModal = document.getElementById('supportModal');
-  const supportCloseBtn = document.getElementById('supportCloseBtn');
-
-  if (!supportBtn || !supportModal || !supportCloseBtn) {
-    return;
-  }
-
-  const openModal = () => {
-    supportModal.classList.add('open');
-    supportModal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-  };
-
-  const closeModal = () => {
-    supportModal.classList.remove('open');
-    supportModal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  };
-
-  supportBtn.addEventListener('click', openModal);
-  supportCloseBtn.addEventListener('click', closeModal);
-
-  supportModal.addEventListener('click', (event) => {
-    if (event.target === supportModal) {
-      closeModal();
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && supportModal.classList.contains('open')) {
-      closeModal();
-    }
-  });
-}
-
-
 
 // LRC 解析器
 class LRCParser {
