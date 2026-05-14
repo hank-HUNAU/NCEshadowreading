@@ -144,7 +144,10 @@ class App {
     this.activeCard(i);
     this.reset();
     
-    // Load LRC from Supabase Storage
+    // 先显示弹窗（不等待 LRC 加载）
+    this.els.dlg.showModal();
+    
+    // 异步加载 LRC
     const lrcUrl = getLrcUrl(u.filename);
     let txt = this.cache.get(lrcUrl);
     if (!txt) {
@@ -160,10 +163,6 @@ class App {
     }
     this.lines = Lrc.parse(txt);
     this.renderLines();
-    
-    // 先显示弹窗
-    this.restoreTime();
-    this.els.dlg.showModal();
     
     // 异步加载音频
     const audio = this.els.audio;
