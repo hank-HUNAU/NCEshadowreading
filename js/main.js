@@ -23,7 +23,7 @@ class Lrc {
     for (const line of raw.split('\n')) {
       const m = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\]\s*(.+)/);
       if (!m) continue;
-      const t = +m[1] * 60 + +m[2] + (m[3].length === 2 ? +m[3] * 10 : +m[3]) / 1000 - 0.5;
+      const t = +m[1] * 60 + +m[2] + (m[3].length === 2 ? +m[3] * 10 : +m[3]) / 1000;
       const parts = m[4].trim().split('|').map(s => s.trim());
       list.push({ time: Math.max(0, t), en: parts[0], cn: parts[1] || '' });
     }
