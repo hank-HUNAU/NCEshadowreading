@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+  <title>NCE 英语学习站</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部导航栏 -->
+    <header class="top-bar">
+      <h1 class="site-title">新概念英语</h1>
+      <select id="bookSelect" class="book-select">
+        <option value="">加载中...</option>
+      </select>
+    </header>
+
+    <!-- 目录页：卡片网格 -->
+    <main id="unitGrid" class="grid-container"></main>
+
+    <!-- 沉浸式播放弹窗 -->
+    <dialog id="playerDialog" class="player-dialog">
+      <div class="dialog-inner">
+        <!-- 弹窗头部 -->
+        <header class="dialog-header">
+          <button id="closeBtn" class="icon-btn close-icon" aria-label="关闭">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+          <h2 id="unitTitle" class="dialog-title">课文标题</h2>
+          <div class="nav-group">
+            <button id="prevBtn" class="icon-btn nav-icon" aria-label="上一课">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <button id="nextBtn" class="icon-btn nav-icon" aria-label="下一课">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- 歌词区域 -->
+        <section id="lyricsArea" class="lyrics-scroll"></section>
+
+        <!-- 底部控制栏 -->
+        <footer class="player-footer">
+          <div class="progress-row">
+            <span id="curTime" class="time-text">0:00</span>
+            <div id="progressTrack" class="track-bar">
+              <div id="progressFill" class="fill-bar"></div>
+            </div>
+            <span id="durTime" class="time-text">0:00</span>
+          </div>
+          
+          <div class="controls-row">
+            <button id="playBtn" class="ctrl-btn main-play" aria-label="播放">
+              <svg class="ico-play" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <svg class="ico-pause" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="display:none">
+                <path d="M6 4h4v16H6zm8 0h4v16h-4z"/>
+              </svg>
+            </button>
+            
+            <button id="modeBtn" class="ctrl-btn tag-btn" title="单句循环">
+              <span id="modeLabel">单句</span>
+            </button>
+            
+            <button id="speedBtn" class="ctrl-btn tag-btn" title="播放速度">
+              <span id="speedLabel">1.0x</span>
+            </button>
+            
+            <button id="transBtn" class="ctrl-btn tag-btn" title="翻译显示">
+              <span id="transLabel">中文</span>
+            </button>
+          </div>
+        </footer>
+      </div>
+    </dialog>
+  </div>
+
+  <audio id="audio" preload="auto"></audio>
+  <script src="js/main.js"></script>
+</body>
+</html>
