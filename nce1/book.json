@@ -1,8 +1,7 @@
 {
   "units": [
-    {
-      "title": "Excuse Me!",
-      "filename": "001"
-    }
+    { "title": "Excuse Me!", "filename": "001" },
+    { "title": "Sorry, Sir.", "filename": "003" },
+    { "title": "Nice to Meet You.", "filename": "005" }
   ]
 }
