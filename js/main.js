@@ -2,18 +2,14 @@
 const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 const LS = { BOOK: 'nce_book', UNIT: k => `nce_${k}_u`, TIME: (k,u) => `nce_${k}_${u}_t`, SPD: 'nce_spd', MODE: 'nce_mode', TR: 'nce_tr' };
 
-/* Supabase 配置 */
-const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
-const SUPABASE_BUCKET = 'nce-audio';
-
-// 获取音频 URL（从 Supabase Storage）
+/* 获取音频 URL（从 GitHub Pages 加载） */
 function getAudioUrl(filename) {
-  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.mp3`;
+  return `./audio/NCE1/${filename}.mp3`;
 }
 
-// 获取 LRC URL（从 Supabase Storage）
+/* 获取 LRC URL（从 GitHub Pages 加载） */
 function getLrcUrl(filename) {
-  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.lrc`;
+  return `./audio/NCE1/${filename}.lrc`;
 }
 
 /* 歌词解析器 */
