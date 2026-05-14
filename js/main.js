@@ -40,6 +40,7 @@ class App {
       close: document.getElementById('closeBtn'),
       prev: document.getElementById('prevBtn'),
       next: document.getElementById('nextBtn'),
+      expand: document.getElementById('expandBtn'),
       area: document.getElementById('lyricsArea'),
       play: document.getElementById('playBtn'),
       track: document.getElementById('progressTrack'),
@@ -261,6 +262,18 @@ class App {
     // Nav
     this.els.prev.addEventListener('click', () => this.idx > 0 && this.open(this.idx - 1));
     this.els.next.addEventListener('click', () => this.idx < this.units.length - 1 && this.open(this.idx + 1));
+    
+    // Expand/Maximize Toggle
+    this.els.expand.addEventListener('click', () => {
+      const inner = this.els.dlg.querySelector('.dialog-inner');
+      inner.classList.toggle('expanded');
+      
+      // Toggle icons
+      const isExpanded = inner.classList.contains('expanded');
+      inner.querySelector('.ico-expand').style.display = isExpanded ? 'none' : 'block';
+      inner.querySelector('.ico-shrink').style.display = isExpanded ? 'block' : 'none';
+      this.els.expand.setAttribute('aria-label', isExpanded ? '退出全屏' : '全屏模式');
+    });
     
     // Line click
     this.els.area.addEventListener('click', e => {
