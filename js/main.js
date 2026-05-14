@@ -161,45 +161,23 @@ class App {
     this.lines = Lrc.parse(txt);
     this.renderLines();
     
-    // Load Audio from Supabase Storage
+    // 先显示弹窗
+    this.restoreTime();
+    this.els.dlg.showModal();
+    
+    // 异步加载音频
     const audio = this.els.audio;
     const audioSrc = getAudioUrl(u.filename);
     console.log('Loading audio:', audioSrc);
     audio.src = audioSrc;
     audio.load();
     
-    // 等待音频加载完成后再显示弹窗
     audio.addEventListener('loadeddata', () => {
       console.log('Audio loaded, duration:', audio.duration);
-      this.restoreTime();
-      this.els.dlg.showModal();
     }, { once: true });
     
     audio.addEventListener('error', (e) => {
       console.error('Audio load error:', e);
-      alert('音频加载失败');
-    });
-  }
-    this.lines = Lrc.parse(txt);
-    this.renderLines();
-    
-    // Load Audio
-    const audio = this.els.audio;
-    const audioSrc = `./audio/${this.key}/${u.filename}.mp3`;
-    console.log('Loading audio:', audioSrc);
-    audio.src = audioSrc;
-    audio.load();
-    
-    // 等待音频加载完成后再显示弹窗
-    audio.addEventListener('loadeddata', () => {
-      console.log('Audio loaded, duration:', audio.duration);
-      this.restoreTime();
-      this.els.dlg.showModal();
-    }, { once: true });
-    
-    audio.addEventListener('error', (e) => {
-      console.error('Audio load error:', e);
-      alert('音频加载失败，请检查网络连接');
     });
   }
 
