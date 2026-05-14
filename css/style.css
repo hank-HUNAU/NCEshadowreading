@@ -74,7 +74,8 @@ body {
 /* 卡片网格 */
 .grid-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  /* 稍微增加最小宽度，让卡片更方正 */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
   flex: 1;
 }
@@ -82,37 +83,49 @@ body {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 16px;
-  text-align: center;
+  border-radius: 16px; /* 更大的圆角 */
+  
+  /* 布局优化：居中内容 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  
+  /* 核心：保持宽高比，防止变长条 */
+  aspect-ratio: 1.5 / 1; 
 }
 
 .card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.15);
   border-color: var(--primary);
 }
 
 .card.active {
   border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.05);
-  box-shadow: 0 0 0 2px var(--primary);
+  background: rgba(59, 130, 246, 0.08);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .card-num {
   font-family: "JetBrains Mono", monospace;
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 2.2rem; /* 更大更醒目 */
+  font-weight: 800;
   color: var(--primary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+  line-height: 1;
 }
 
 .card-title {
-  font-size: 0.85rem;
-  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text); /* 加深标题颜色 */
+  text-align: center;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -124,16 +137,18 @@ body {
 .player-dialog {
   border: none;
   padding: 0;
+  
+  /* 适配移动端视口 (Dynamic Viewport Height) */
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   max-width: 100vw;
-  max-height: 100vh;
+  max-height: 100dvh;
   background: transparent;
 }
 
 .player-dialog::backdrop {
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.6); /* 更深的遮罩 */
+  backdrop-filter: blur(8px);
 }
 
 .dialog-inner {
@@ -142,15 +157,18 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--card);
+  overflow: hidden; /* 防止圆角溢出 */
 }
 
+/* 桌面端优化：居中卡片样式 */
 @media (min-width: 768px) {
   .dialog-inner {
-    max-width: 800px;
-    max-height: 85vh;
+    width: 92%; /* 稍微宽一点 */
+    max-width: 960px;
+    height: 88vh; /* 更高一点 */
     margin: auto;
-    border-radius: 20px;
-    box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+    border-radius: 24px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.35);
   }
 }
 
