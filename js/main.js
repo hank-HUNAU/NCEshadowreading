@@ -143,11 +143,22 @@ class App {
     
     // Load Audio
     const audio = this.els.audio;
-    audio.src = `./audio/${this.key}/${u.filename}.mp3`;
+    const audioSrc = `./audio/${this.key}/${u.filename}.mp3`;
+    console.log('Loading audio:', audioSrc);
+    audio.src = audioSrc;
     audio.load();
     
-    this.restoreTime();
-    this.els.dlg.showModal();
+    // 等待音频加载完成后再显示弹窗
+    audio.addEventListener('loadeddata', () => {
+      console.log('Audio loaded, duration:', audio.duration);
+      this.restoreTime();
+      this.els.dlg.showModal();
+    }, { once: true });
+    
+    audio.addEventListener('error', (e) => {
+      console.error('Audio load error:', e);
+      alert('音频加载失败，请检查网络连接');
+    });
   }
 
   reset() {
@@ -192,12 +203,15 @@ class App {
     
     // 等待音频加载完成
     if (!this.els.audio.src || this.els.audio.readyState < 2) {
+      console.log('Audio not ready, waiting...');
       this.els.audio.addEventListener('canplay', () => {
+        console.log('Audio ready, playing line', i);
         this._doPlayLine(line, i);
       }, { once: true });
       return;
     }
     
+    console.log('Audio ready, playing line', i);
     this._doPlayLine(line, i);
   }
 
@@ -213,10 +227,7 @@ class App {
       this.bound = null; 
     }
     
-    const playPromise = this.els.audio.play();
-    if (playPromise) {
-      playPromise.catch(e => console.log('Playback:', e.message));
-    }
+    this.els.audio.play().catch(e => console.log('Play error:', e.message));
     this.saveTime(line.time);
   }
 
