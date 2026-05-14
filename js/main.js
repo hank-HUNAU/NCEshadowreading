@@ -157,6 +157,7 @@ class App {
     this.els.cur.textContent = '0:00';
     this.els.dur.textContent = '0:00';
     this.playIcon(false);
+    this.bound = null;
   }
 
   restoreTime() {
@@ -188,18 +189,28 @@ class App {
   playLine(i) {
     if (i < 0 || i >= this.lines.length) return;
     const line = this.lines[i];
+    
+    // 等待音频加载完成
+    if (!this.els.audio.src || this.els.audio.readyState < 2) {
+      this.els.audio.addEventListener('canplay', () => {
+        this._doPlayLine(line);
+      }, { once: true });
+      return;
+    }
+    
+    this._doPlayLine(line);
+  }
+
+  _doPlayLine(line) {
     this.els.audio.currentTime = line.time;
     if (this.mode === 'single') {
-      const nxt = this.lines[i+1];
+      const nxt = this.lines[this.cur + 2];
       this.bound = nxt ? nxt.time : this.els.audio.duration;
     } else { this.bound = null; }
     
-    // 确保音频已准备好再播放
     const playPromise = this.els.audio.play();
     if (playPromise) {
-      playPromise.catch(e => {
-        console.log('Playback interrupted:', e.message);
-      });
+      playPromise.catch(e => console.log('Playback:', e.message));
     }
     this.saveTime(line.time);
   }
