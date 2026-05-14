@@ -80,25 +80,24 @@ body {
   flex: 1;
 }
 
-.card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px; /* 更大的圆角 */
-  
-  /* 布局优化：居中内容 */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 10px;
-  
-  cursor: pointer;
-  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  
-  /* 核心：保持宽高比，防止变长条 */
-  aspect-ratio: 1.5 / 1; 
-}
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 12px;
+    
+    cursor: pointer;
+    transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    
+    /* 手机端不使用 aspect-ratio，改用最小高度，防止内容被裁切 */
+    min-height: 110px;
+  }
 
 .card:hover {
   transform: translateY(-4px) scale(1.02);
