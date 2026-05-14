@@ -144,6 +144,11 @@ body {
   max-width: 100vw;
   max-height: 100dvh;
   background: transparent;
+  
+  /* 核心修改：使用 Flex 居中内部卡片 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .player-dialog::backdrop {
