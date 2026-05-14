@@ -113,7 +113,10 @@ class App {
 
   restoreUnit() {
     const i = +(localStorage.getItem(LS.UNIT(this.key)) || 0);
-    if (this.units.length > 0) this.open(Math.min(i, this.units.length-1));
+    if (this.units.length > 0) {
+      const safeIdx = Math.min(i, this.units.length-1);
+      this.activeCard(safeIdx);
+    }
   }
 
   async open(i) {
