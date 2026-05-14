@@ -1,7 +1,36 @@
 {
   "units": [
-    { "title": "Excuse Me!", "filename": "001" },
-    { "title": "Sorry, Sir.", "filename": "003" },
-    { "title": "Nice to Meet You.", "filename": "005" }
+    {
+      "title": "Excuse Me!",
+      "filename": "001"
+    },
+    {
+      "title": "Sorry, Sir.",
+      "filename": "003"
+    },
+    {
+      "title": "Nice to Meet You.",
+      "filename": "005"
+    },
+    {
+      "title": "Are You a Teacher?",
+      "filename": "007"
+    },
+    {
+      "title": "How Are You Today?",
+      "filename": "009"
+    },
+    {
+      "title": "Is This Your Shirt?",
+      "filename": "011"
+    },
+    {
+      "title": "A New Dress",
+      "filename": "013"
+    },
+    {
+      "title": "Your Passports, Please.",
+      "filename": "015"
+    }
   ]
 }
