@@ -2,13 +2,29 @@
 const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 const LS = { BOOK: 'nce_book', UNIT: k => `nce_${k}_u`, TIME: (k,u) => `nce_${k}_${u}_t`, SPD: 'nce_spd', MODE: 'nce_mode', TR: 'nce_tr' };
 
-/* 获取音频 URL（从 GitHub Pages 加载） */
+/* 音频源配置 - 一键切换 */
+// 可选值：'github' 或 'supabase'
+const AUDIO_SOURCE = 'github';
+
+/* Supabase 配置 */
+const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
+const SUPABASE_BUCKET = 'nce-audio';
+
+/* 获取音频 URL */
 function getAudioUrl(filename) {
+  if (AUDIO_SOURCE === 'supabase') {
+    return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.mp3`;
+  }
+  // 默认从 GitHub 加载
   return `./audio/NCE1/${filename}.mp3`;
 }
 
-/* 获取 LRC URL（从 GitHub Pages 加载） */
+/* 获取 LRC URL */
 function getLrcUrl(filename) {
+  if (AUDIO_SOURCE === 'supabase') {
+    return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.lrc`;
+  }
+  // 默认从 GitHub 加载
   return `./audio/NCE1/${filename}.lrc`;
 }
 
