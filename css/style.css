@@ -112,12 +112,11 @@ body {
 }
 
 .card-num {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 2.2rem; /* 更大更醒目 */
-  font-weight: 800;
+  font-size: 0.9rem; /* 与标题一致 */
+  font-weight: 600;
   color: var(--primary);
-  margin-bottom: 4px;
-  line-height: 1;
+  margin-bottom: 6px;
+  line-height: 1.3;
 }
 
 .card-title {
@@ -382,8 +381,8 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
   }
 
   .card-num {
-    font-size: 1.6rem;
-    margin-bottom: 2px;
+    font-size: 0.75rem;
+    margin-bottom: 3px;
   }
 
   .card-title {
