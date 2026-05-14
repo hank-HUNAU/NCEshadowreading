@@ -4,7 +4,7 @@ const LS = { BOOK: 'nce_book', UNIT: k => `nce_${k}_u`, TIME: (k,u) => `nce_${k}
 
 /* Supabase 配置 */
 const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
-const SUPABASE_BUCKET = 'nce';
+const SUPABASE_BUCKET = 'nce-audio';
 
 // 获取音频 URL（从 Supabase Storage）
 function getAudioUrl(filename) {
