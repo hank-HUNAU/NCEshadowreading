@@ -106,7 +106,7 @@ class App {
   grid() {
     this.els.grid.innerHTML = this.units.map((u, i) => `
       <div class="card" data-i="${i}">
-        <div class="card-num">${u.filename}</div>
+        <div class="card-num">${u.lesson_num || u.filename}</div>
         <div class="card-title">${u.title}</div>
       </div>`).join('');
   }

@@ -2,67 +2,83 @@
   "units": [
     {
       "title": "Excuse Me!",
-      "filename": "001"
+      "filename": "001",
+      "lesson_num": "Lesson 1"
     },
     {
       "title": "Sorry, Sir.",
-      "filename": "003"
+      "filename": "003",
+      "lesson_num": "Lesson 3"
     },
     {
       "title": "Nice to Meet You.",
-      "filename": "005"
+      "filename": "005",
+      "lesson_num": "Lesson 5"
     },
     {
       "title": "Are You a Teacher?",
-      "filename": "007"
+      "filename": "007",
+      "lesson_num": "Lesson 7"
     },
     {
       "title": "How Are You Today?",
-      "filename": "009"
+      "filename": "009",
+      "lesson_num": "Lesson 9"
     },
     {
       "title": "Is This Your Shirt?",
-      "filename": "011"
+      "filename": "011",
+      "lesson_num": "Lesson 11"
     },
     {
       "title": "A New Dress",
-      "filename": "013"
+      "filename": "013",
+      "lesson_num": "Lesson 13"
     },
     {
       "title": "Your Passports, Please.",
-      "filename": "015"
+      "filename": "015",
+      "lesson_num": "Lesson 15"
     },
     {
       "title": "How do you do?",
-      "filename": "017"
+      "filename": "017",
+      "lesson_num": "Lesson 17"
     },
     {
       "title": "Tired and Thirsty",
-      "filename": "019"
+      "filename": "019",
+      "lesson_num": "Lesson 19"
     },
     {
       "title": "Which Book?",
-      "filename": "021"
+      "filename": "021",
+      "lesson_num": "Lesson 21"
     },
     {
       "title": "Which Glasses?",
-      "filename": "023"
+      "filename": "023",
+      "lesson_num": "Lesson 23"
     },
     {
       "title": "Mrs. Smith's Kitchen",
-      "filename": "025"
+      "filename": "025",
+      "lesson_num": "Lesson 25"
     },
     {
       "title": "Mrs. Smith's Living Room",
-      "filename": "027"
+      "filename": "027",
+      "lesson_num": "Lesson 27"
     },
     {
       "title": "Come In, Amy.",
-      "filename": "029"
+      "filename": "029",
+      "lesson_num": "Lesson 29"
     },
     {
       "title": "Where's Sally?",
-      "filename": "031"
+      "filename": "031",
+      "lesson_num": "Lesson 31"
     }
   ]
 }
