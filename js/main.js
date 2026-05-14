@@ -2,6 +2,20 @@
 const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 const LS = { BOOK: 'nce_book', UNIT: k => `nce_${k}_u`, TIME: (k,u) => `nce_${k}_${u}_t`, SPD: 'nce_spd', MODE: 'nce_mode', TR: 'nce_tr' };
 
+/* Supabase 配置 */
+const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
+const SUPABASE_BUCKET = 'nce';
+
+// 获取音频 URL（从 Supabase Storage）
+function getAudioUrl(filename) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.mp3`;
+}
+
+// 获取 LRC URL（从 Supabase Storage）
+function getLrcUrl(filename) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.lrc`;
+}
+
 /* 歌词解析器 */
 class Lrc {
   static parse(raw) {
@@ -130,14 +144,42 @@ class App {
     this.activeCard(i);
     this.reset();
     
-    // Load LRC
-    const local = `./audio/${this.key}/${u.filename}.lrc`;
-    let txt = this.cache.get(local);
+    // Load LRC from Supabase Storage
+    const lrcUrl = getLrcUrl(u.filename);
+    let txt = this.cache.get(lrcUrl);
     if (!txt) {
-      try { txt = await fetch(local).then(r => r.text()); }
-      catch { txt = await fetch(`${this.path}/${u.filename}.lrc`).then(r => r.text()); }
-      this.cache.set(local, txt);
+      try {
+        const response = await fetch(lrcUrl);
+        if (!response.ok) throw new Error('LRC not found');
+        txt = await response.text();
+      } catch (e) {
+        console.error('Failed to load LRC:', e);
+        txt = '';
+      }
+      this.cache.set(lrcUrl, txt);
     }
+    this.lines = Lrc.parse(txt);
+    this.renderLines();
+    
+    // Load Audio from Supabase Storage
+    const audio = this.els.audio;
+    const audioSrc = getAudioUrl(u.filename);
+    console.log('Loading audio:', audioSrc);
+    audio.src = audioSrc;
+    audio.load();
+    
+    // 等待音频加载完成后再显示弹窗
+    audio.addEventListener('loadeddata', () => {
+      console.log('Audio loaded, duration:', audio.duration);
+      this.restoreTime();
+      this.els.dlg.showModal();
+    }, { once: true });
+    
+    audio.addEventListener('error', (e) => {
+      console.error('Audio load error:', e);
+      alert('音频加载失败');
+    });
+  }
     this.lines = Lrc.parse(txt);
     this.renderLines();
     
