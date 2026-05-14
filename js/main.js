@@ -191,10 +191,16 @@ class App {
     this.els.audio.currentTime = line.time;
     if (this.mode === 'single') {
       const nxt = this.lines[i+1];
-      this.els.audio.oncanplay = () => {};
       this.bound = nxt ? nxt.time : this.els.audio.duration;
     } else { this.bound = null; }
-    this.els.audio.play();
+    
+    // 确保音频已准备好再播放
+    const playPromise = this.els.audio.play();
+    if (playPromise) {
+      playPromise.catch(e => {
+        console.log('Playback interrupted:', e.message);
+      });
+    }
     this.saveTime(line.time);
   }
 
