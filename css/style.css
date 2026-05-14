@@ -136,15 +136,17 @@ body {
 .player-dialog {
   border: none;
   padding: 0;
-  
-  /* 适配移动端视口 (Dynamic Viewport Height) */
   width: 100vw;
   height: 100dvh;
   max-width: 100vw;
   max-height: 100dvh;
   background: transparent;
-  
-  /* 核心修改：使用 Flex 居中内部卡片 */
+  /* 移除 display: flex，防止强制显示弹窗。
+     依赖 dialog 默认的 display: none 来隐藏。
+     在 [open] 状态时再启用 flex 居中。 */
+}
+
+.player-dialog[open] {
   display: flex;
   justify-content: center;
   align-items: center;
