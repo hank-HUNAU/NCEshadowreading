@@ -633,3 +633,14 @@ body.blur-cn .lyric-cn {
     transition-duration: 0.01ms !important;
   }
 }
+
+.error-msg {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+}

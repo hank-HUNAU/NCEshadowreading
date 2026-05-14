@@ -219,7 +219,8 @@ class NceApp {
 
   _restoreBookSelection() {
     const stored = localStorage.getItem(STORAGE_KEYS.BOOK);
-    const key = stored || this.books[0]?.key || '';
+    const isValid = this.books.some((b) => b.key === stored);
+    const key = isValid ? stored : this.books[0]?.key || '';
     if (key) this._switchBook(key);
   }
 
@@ -248,13 +249,18 @@ class NceApp {
       return;
     }
     try {
-      const resp = await fetch(`${this.bookPath}/book.json`);
+      const url = `${this.bookPath}/book.json`;
+      console.log('Loading book config from:', url);
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
       const data = await resp.json();
+      console.log('Loaded units:', data.units?.length || 0);
       this.units = data.units || [];
       this._renderUnitGrid();
       this._restoreLastUnit();
     } catch (err) {
       console.error('Failed to load units:', err);
+      this.els.unitGrid.innerHTML = `<div class="error-msg">加载失败：${err.message}</div>`;
       this.units = [];
     }
   }
