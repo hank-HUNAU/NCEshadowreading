@@ -193,20 +193,25 @@ class App {
     // 等待音频加载完成
     if (!this.els.audio.src || this.els.audio.readyState < 2) {
       this.els.audio.addEventListener('canplay', () => {
-        this._doPlayLine(line);
+        this._doPlayLine(line, i);
       }, { once: true });
       return;
     }
     
-    this._doPlayLine(line);
+    this._doPlayLine(line, i);
   }
 
-  _doPlayLine(line) {
+  _doPlayLine(line, i) {
     this.els.audio.currentTime = line.time;
+    this.cur = i;
+    this.highlight();
+    
     if (this.mode === 'single') {
-      const nxt = this.lines[this.cur + 2];
+      const nxt = this.lines[i + 1];
       this.bound = nxt ? nxt.time : this.els.audio.duration;
-    } else { this.bound = null; }
+    } else { 
+      this.bound = null; 
+    }
     
     const playPromise = this.els.audio.play();
     if (playPromise) {
