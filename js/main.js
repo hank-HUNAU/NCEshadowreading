@@ -1,8 +1,3 @@
-const REMOTE_BASE = {
-  NCE1: 'https://raw.githubusercontent.com/ichochy/NCE/main/book1',
-  NCE2: 'https://raw.githubusercontent.com/ichochy/NCE/main/book2'
-};
-
 const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
 const STORAGE_KEYS = {
@@ -58,8 +53,8 @@ class AudioResolver {
     return `./audio/${bookKey}/${filename}.${ext}`;
   }
 
-  static buildRemote(bookKey, filename, ext) {
-    return `${REMOTE_BASE[bookKey]}/${filename}.${ext}`;
+  static buildRemote(bookPath, filename, ext) {
+    return `${bookPath}/${filename}.${ext}`;
   }
 }
 
@@ -230,6 +225,8 @@ class NceApp {
 
   _switchBook(key) {
     this.bookKey = key;
+    const book = this.books.find((b) => b.key === key);
+    this.bookPath = book ? book.bookPath : '';
     localStorage.setItem(STORAGE_KEYS.BOOK, key);
     this.els.bookSelector.value = key;
     this._renderBookOptions();
@@ -244,8 +241,14 @@ class NceApp {
   }
 
   async _loadUnitList() {
+    if (!this.bookPath) {
+      console.warn('No bookPath set for', this.bookKey);
+      this.units = [];
+      this._renderUnitGrid();
+      return;
+    }
     try {
-      const resp = await fetch(`${REMOTE_BASE[this.bookKey]}/book.json`);
+      const resp = await fetch(`${this.bookPath}/book.json`);
       const data = await resp.json();
       this.units = data.units || [];
       this._renderUnitGrid();
@@ -289,7 +292,7 @@ class NceApp {
     this._resetPlayer();
 
     const localLrc = AudioResolver.buildLocal(this.bookKey, unit.filename, 'lrc');
-    const remoteLrc = AudioResolver.buildRemote(this.bookKey, unit.filename, 'lrc');
+    const remoteLrc = AudioResolver.buildRemote(this.bookPath, unit.filename, 'lrc');
 
     let lrcText = this._lrcCache.get(localLrc);
     if (!lrcText) {
@@ -308,7 +311,7 @@ class NceApp {
     this._renderLyrics();
 
     const localAudio = AudioResolver.buildLocal(this.bookKey, unit.filename, 'mp3');
-    const remoteAudio = AudioResolver.buildRemote(this.bookKey, unit.filename, 'mp3');
+    const remoteAudio = AudioResolver.buildRemote(this.bookPath, unit.filename, 'mp3');
 
     try {
       await this.engine.load(localAudio, remoteAudio);
@@ -491,7 +494,7 @@ class NceApp {
         .then((r) => r.ok ? r.text() : Promise.reject())
         .then((t) => this._lrcCache.set(localLrc, t))
         .catch(() => {
-          fetch(AudioResolver.buildRemote(this.bookKey, unit.filename, 'lrc'))
+          fetch(AudioResolver.buildRemote(this.bookPath, unit.filename, 'lrc'))
             .then((r) => r.text())
             .then((t) => this._lrcCache.set(localLrc, t))
             .catch(() => {});

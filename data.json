@@ -3,12 +3,12 @@
     {
       "key": "NCE1",
       "title": "新概念英语第一册",
-      "bookPath": "https://raw.githubusercontent.com/ichochy/NCE/main/book1"
+      "bookPath": "./nce1"
     },
     {
       "key": "NCE2",
       "title": "新概念英语第二册",
-      "bookPath": "https://raw.githubusercontent.com/ichochy/NCE/main/book2"
+      "bookPath": "./nce2"
     }
   ]
 }
