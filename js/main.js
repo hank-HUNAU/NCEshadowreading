@@ -264,16 +264,25 @@ class App {
     this.els.next.addEventListener('click', () => this.idx < this.units.length - 1 && this.open(this.idx + 1));
     
     // Expand/Maximize Toggle
-    this.els.expand.addEventListener('click', () => {
-      const inner = this.els.dlg.querySelector('.dialog-inner');
-      inner.classList.toggle('expanded');
-      
-      // Toggle icons
-      const isExpanded = inner.classList.contains('expanded');
-      inner.querySelector('.ico-expand').style.display = isExpanded ? 'none' : 'block';
-      inner.querySelector('.ico-shrink').style.display = isExpanded ? 'block' : 'none';
-      this.els.expand.setAttribute('aria-label', isExpanded ? '退出全屏' : '全屏模式');
-    });
+    if (this.els.expand) {
+      this.els.expand.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const inner = this.els.dlg.querySelector('.dialog-inner');
+        if (inner) {
+          inner.classList.toggle('expanded');
+          
+          // Toggle icons
+          const isExpanded = inner.classList.contains('expanded');
+          const icoExp = this.els.expand.querySelector('.ico-expand');
+          const icoShr = this.els.expand.querySelector('.ico-shrink');
+          
+          if (icoExp) icoExp.style.display = isExpanded ? 'none' : 'block';
+          if (icoShr) icoShr.style.display = isExpanded ? 'block' : 'none';
+          this.els.expand.setAttribute('aria-label', isExpanded ? '退出全屏' : '全屏模式');
+        }
+      });
+    }
     
     // Line click
     this.els.area.addEventListener('click', e => {
