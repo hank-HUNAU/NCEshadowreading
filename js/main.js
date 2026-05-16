@@ -156,6 +156,7 @@ class App {
       this.units = d.units || [];
       this.grid();
       this.restoreUnit();
+      this.preloadLrcFiles(); // 预加载 LRC 文件
     } catch(e) { this.units = []; }
   }
 
@@ -188,6 +189,18 @@ class App {
         ${showTitle && u.title ? `<div class="card-title">${u.title}</div>` : ''}
       </div>`;
     }).join('');
+  }
+
+  async preloadLrcFiles() {
+    // 预加载所有 LRC 文件到缓存，点击播放时 0 延迟显示歌词
+    const promises = this.units.map(u => {
+      const url = getLrcUrl(u.filename, this.path, this.key);
+      return fetch(url).then(r => r.text()).then(lrc => {
+        this.cache.set(url, lrc);
+      }).catch(() => {}); // 忽略失败
+    });
+    await Promise.all(promises);
+    console.log('[Preload] LRC files cached:', this.units.length);
   }
 
   async updateTitlesFromLrc() {
