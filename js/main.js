@@ -161,13 +161,13 @@ class App {
 
   grid() {
     this.els.grid.innerHTML = this.units.map((u, i) => {
-      // 从 lesson_num 提取数字（如 "Lesson 1" → "1"）
-      const numMatch = u.lesson_num ? u.lesson_num.match(/(\d+)/) : null;
-      const num = numMatch ? numMatch[1] : u.filename;
+      // 从 lesson_num 提取数字（如 "10-1" → "10-1"）
+      const num = u.lesson_num || u.filename;
       
       return `
       <div class="card" data-i="${i}">
         <div class="card-num">${num}</div>
+        <div class="card-title">${u.title || ''}</div>
       </div>`;
     }).join('');
   }
