@@ -156,16 +156,51 @@ class App {
 
   grid() {
     this.els.grid.innerHTML = this.units.map((u, i) => {
-      // 从 lesson_num 提取数字（如 "Lesson 1" → "1"）
-      const numMatch = u.lesson_num ? u.lesson_num.match(/(\d+)/) : null;
-      const num = numMatch ? numMatch[1] : u.filename;
+      // 显示完整 lesson_num（如 "Lesson 1"）
+      const num = u.lesson_num || u.filename;
       
       return `
       <div class="card" data-i="${i}">
         <div class="card-num">${num}</div>
-        <div class="card-title">${u.title}</div>
+        <div class="card-title" data-filename="${u.filename}">${u.title}</div>
       </div>`;
     }).join('');
+    
+    // 异步从 LRC 获取标题
+    this.updateTitlesFromLrc();
+  }
+
+  async updateTitlesFromLrc() {
+    // 批量从 LRC 获取 [ti:] 标签作为标题
+    const cards = this.els.grid.querySelectorAll('.card-title');
+    
+    for (const card of cards) {
+      const filename = card.getAttribute('data-filename');
+      if (!filename) continue;
+      
+      const lrcUrl = getLrcUrl(filename, this.path, this.key);
+      let txt = this.cache.get(lrcUrl);
+      
+      if (!txt) {
+        try {
+          const response = await fetch(lrcUrl);
+          if (response.ok) {
+            txt = await response.text();
+            this.cache.set(lrcUrl, txt);
+          }
+        } catch (e) {
+          console.error('Failed to load LRC for title:', e);
+        }
+      }
+      
+      if (txt) {
+        // 从 [ti:xxx] 提取标题
+        const tiMatch = txt.match(/\[ti:(.+)\]/);
+        if (tiMatch) {
+          card.textContent = tiMatch[1].trim();
+        }
+      }
+    }
   }
 
   restoreUnit() {
