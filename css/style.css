@@ -198,11 +198,11 @@ body {
   border: none;
   background: transparent;
   color: var(--text-dim);
-  border-radius: 8px;
+  border-radius: 0; /* 无边框圆角 */
   cursor: pointer;
 }
 
-.icon-btn:hover { background: var(--bg); color: var(--text); }
+.icon-btn:hover { background: transparent; color: var(--text); }
 
 .dialog-title {
   flex: 1;
