@@ -265,6 +265,14 @@ class App {
     
     audio.addEventListener('error', (e) => {
       console.error('Audio load error:', e);
+      console.error('Audio src:', audio.src);
+      console.error('Audio error code:', audio.error?.code);
+      console.error('Audio error message:', audio.error?.message);
+      
+      // 测试直接访问 URL
+      fetch(audio.src, { method: 'HEAD' })
+        .then(r => console.log('Direct fetch status:', r.status))
+        .catch(err => console.error('Direct fetch error:', err));
     });
   }
 
