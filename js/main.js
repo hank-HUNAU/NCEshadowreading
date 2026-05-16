@@ -151,6 +151,10 @@ class App {
   async loadUnits() {
     this.renderOptions();
     if (!this.path) return;
+    
+    // 显示骨架屏
+    this.showSkeleton();
+    
     try {
       const d = await fetch(`${this.path}/book.json`).then(r => r.json());
       this.units = d.units || [];
@@ -158,6 +162,17 @@ class App {
       this.restoreUnit();
       this.preloadLrcFiles(); // 预加载 LRC 文件
     } catch(e) { this.units = []; }
+  }
+
+  showSkeleton() {
+    // 根据当前布局显示骨架屏
+    const isThink = (this.key === 'THINK_0' || this.key === 'THINK_F');
+    const columns = isThink ? 8 : 12;
+    const count = isThink ? 8 : 24; // Think 显示 8 个，NCE1 显示 24 个
+    
+    this.els.grid.innerHTML = Array(count).fill(0).map(() => `
+      <div class="card skeleton"></div>
+    `).join('');
   }
 
   grid() {
@@ -293,6 +308,8 @@ class App {
     
     audio.addEventListener('loadeddata', () => {
       console.log('Audio loaded, duration:', audio.duration);
+      // 恢复上次播放进度
+      this.restoreTime();
     }, { once: true });
     
     audio.addEventListener('error', (e) => {
@@ -482,6 +499,10 @@ class App {
     this.els.audio.addEventListener('timeupdate', () => {
       this.highlight();
       this.updateProg();
+      // 保存播放进度（每 5 秒保存一次）
+      if (Math.floor(this.els.audio.currentTime) % 5 === 0) {
+        localStorage.setItem(LS.TIME(this.key, this.idx), this.els.audio.currentTime);
+      }
       if (this.mode === 'single' && this.bound && this.els.audio.currentTime >= this.bound) {
         this.els.audio.pause();
         this.els.audio.currentTime = this.bound - 0.01;
@@ -526,6 +547,25 @@ class App {
     
     // ESC
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.els.dlg.open) this.els.dlg.close(); });
+    
+    // 键盘快捷键（仅桌面端）
+    if (window.innerWidth > 768) {
+      document.addEventListener('keydown', e => {
+        // 播放器打开时才响应
+        if (!this.els.dlg.open) return;
+        
+        if (e.code === 'Space') {
+          e.preventDefault();
+          this.els.audio.paused ? this.els.audio.play() : this.els.audio.pause();
+        } else if (e.code === 'ArrowLeft') {
+          e.preventDefault();
+          if (this.idx > 0) this.open(this.idx - 1);
+        } else if (e.code === 'ArrowRight') {
+          e.preventDefault();
+          if (this.idx < this.units.length - 1) this.open(this.idx + 1);
+        }
+      });
+    }
   }
 }
 

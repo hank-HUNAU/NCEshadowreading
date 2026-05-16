@@ -10,6 +10,19 @@
   --radius: 12px;
 }
 
+/* 骨架屏加载动画 */
+.skeleton {
+  background: linear-gradient(90deg, var(--border) 25%, var(--text-dim) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: var(--radius);
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0f172a;

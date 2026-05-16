@@ -8,7 +8,8 @@ const STATIC_ASSETS = [
   '/index.html',
   '/js/main.js',
   '/css/style.css',
-  '/data.json'
+  '/data.json',
+  '/manifest.json'
 ];
 
 // 安装：缓存静态资源
