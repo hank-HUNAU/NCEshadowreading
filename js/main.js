@@ -219,6 +219,7 @@ class App {
     localStorage.setItem(LS.UNIT(this.key), i);
     
     const u = this.units[i];
+    console.log('[DEBUG open()]', { i, key: this.key, path: this.path, unit: u });
     
     // 先显示弹窗（标题先显示数字）
     this.els.title.textContent = `Lesson ${parseInt(u.filename)}`;
