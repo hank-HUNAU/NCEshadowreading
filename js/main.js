@@ -8,7 +8,7 @@ const AUDIO_SOURCE = 'supabase';
 
 /* Supabase 配置 */
 const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
-const SUPABASE_BUCKET = 'nce-audio';
+const SUPABASE_BUCKET = 'nce1-audio';
 
 /* 获取音频 URL */
 function getAudioUrl(filename, bookPath) {
