@@ -156,8 +156,9 @@ class App {
 
   grid() {
     this.els.grid.innerHTML = this.units.map((u, i) => {
-      // 显示完整 lesson_num（如 "Lesson 1"）
-      const num = u.lesson_num || u.filename;
+      // 从 lesson_num 提取数字（如 "Lesson 1" → "1"）
+      const numMatch = u.lesson_num ? u.lesson_num.match(/(\d+)/) : null;
+      const num = numMatch ? numMatch[1] : u.filename;
       
       return `
       <div class="card" data-i="${i}">
