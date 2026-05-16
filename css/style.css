@@ -89,14 +89,14 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 20px 16px;
+    padding: 16px;
     
     cursor: pointer;
     transition: all 0.25s ease;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     
-    /* 固定高度 */
-    min-height: 120px;
+    /* 固定高度 - 匹配 NCE1 */
+    min-height: 80px;
   }
 
 .card:hover {
