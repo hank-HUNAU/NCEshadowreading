@@ -71,11 +71,11 @@ body {
   background-position: right 12px center;
 }
 
-/* 卡片网格 */
+/* 卡片网格 - 响应式设计 */
 .grid-container {
   display: grid;
-  /* 每行 10 张卡片 */
-  grid-template-columns: repeat(10, 1fr);
+  /* 桌面端：每行 12 张 */
+  grid-template-columns: repeat(12, 1fr);
   gap: 12px;
   flex: 1;
 }
@@ -83,20 +83,20 @@ body {
   .card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 8px;
+    padding: 10px 6px;
     
     cursor: pointer;
-    transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+    transition: all 0.25s ease;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     
     /* 固定高度 */
-    min-height: 80px;
+    min-height: 90px;
   }
 
 .card:hover {
@@ -112,15 +112,16 @@ body {
 }
 
 .card-num {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 1.1rem; /* 大字号突出数字 */
+  font-weight: 700; /* 加粗 */
   color: var(--primary);
   margin-bottom: 4px;
-  line-height: 1.2;
+  line-height: 1;
+  letter-spacing: 0.5px;
 }
 
 .card-title {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text);
   text-align: center;
@@ -185,6 +186,13 @@ body {
     margin: 0;
     border-radius: 0;
     box-shadow: none;
+  }
+  
+  /* 平板竖屏：每行 8 张 */
+  @media (max-width: 1024px) {
+    .grid-container {
+      grid-template-columns: repeat(8, 1fr);
+    }
   }
 }
 
@@ -369,24 +377,48 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
     font-size: 0.85rem;
   }
 
-  /* 手机卡片网格：一行两个，间距更小 */
+/* ========== 手机端响应式 (≤767px) ========== */
+@media (max-width: 767px) {
+  /* 手机竖屏：每行 4 张 */
   .grid-container {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  
+  /* 手机横屏：每行 8 张 */
+  @media (orientation: landscape) {
+    .grid-container {
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+    }
+    
+    .card {
+      min-height: 70px;
+      padding: 6px 4px;
+    }
+    
+    .card-num {
+      font-size: 0.9rem;
+    }
+    
+    .card-title {
+      font-size: 0.65rem;
+    }
   }
 
   .card {
-    border-radius: 12px;
-    padding: 8px;
+    border-radius: 10px;
+    padding: 8px 6px;
+    min-height: 80px;
   }
 
   .card-num {
-    font-size: 0.75rem;
+    font-size: 0.95rem;
     margin-bottom: 3px;
   }
 
   .card-title {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     line-height: 1.3;
   }
 
