@@ -1,0 +1,47 @@
+{
+  "name": "ilabshadowing",
+  "version": "1.0.0",
+  "description": "AI Lab Shadowing - 新概念英语跟读学习系统",
+  "author": "hank-HUNAU",
+  "repository": "https://github.com/hank-HUNAU/ilabshadowing",
+  "license": "MIT",
+  "build": {
+    "type": "static",
+    "output": "dist"
+  },
+  "features": {
+    "books": [
+      {
+        "key": "NCE1",
+        "name": "NCE Level 1",
+        "description": "新概念英语第一册",
+        "lessons": 72,
+        "audioSource": "supabase",
+        "bucket": "nce1-audio"
+      },
+      {
+        "key": "THINK_0",
+        "name": "Think Level 0",
+        "description": "Think Level 0",
+        "lessons": 2,
+        "audioSource": "supabase",
+        "bucket": "think0-audio",
+        "layout": {
+          "columns": 8,
+          "cardHeight": "60px",
+          "showTitle": true
+        }
+      }
+    ]
+  },
+  "deployment": {
+    "platform": "github-pages",
+    "url": "https://hank-hunau.github.io/ilabshadowing/",
+    "branch": "master"
+  },
+  "release": {
+    "tag": "v1.0.0",
+    "date": "2026-05-16",
+    "commit": "048f81b"
+  }
+}
