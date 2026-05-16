@@ -214,7 +214,9 @@ class App {
     localStorage.setItem(LS.UNIT(this.key), i);
     
     const u = this.units[i];
-    this.els.title.textContent = u.title;
+    
+    // 先显示弹窗（标题先显示数字）
+    this.els.title.textContent = `Lesson ${parseInt(u.filename)}`;
     this.navBtns();
     this.activeCard(i);
     this.reset();
@@ -238,6 +240,12 @@ class App {
     }
     this.lines = Lrc.parse(txt);
     this.renderLines();
+    
+    // 从 LRC [ti:xxx] 获取标题
+    const tiMatch = txt.match(/\[ti:(.+)\]/);
+    if (tiMatch) {
+      this.els.title.textContent = tiMatch[1].trim();
+    }
     
     // 异步加载音频
     const audio = this.els.audio;
