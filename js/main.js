@@ -168,8 +168,16 @@ class App {
     }
     
     this.els.grid.innerHTML = this.units.map((u, i) => {
-      // 从 lesson_num 提取数字（如 "10-1" → "10-1"）
-      const num = u.lesson_num || u.filename;
+      // NCE1: 从 lesson_num 提取纯数字（如 "Lesson 1" → "1"）
+      // Think: 直接使用 lesson_num（如 "10-1"）
+      let num;
+      if (this.key === 'THINK_0' || this.key === 'THINK_F') {
+        num = u.lesson_num || u.filename;
+      } else {
+        // NCE1: 提取数字部分
+        const numMatch = u.lesson_num ? u.lesson_num.match(/(\d+)/) : null;
+        num = numMatch ? numMatch[1] : u.filename;
+      }
       
       // Think Level 系列显示标题，NCE1 不显示
       const showTitle = (this.key === 'THINK_0' || this.key === 'THINK_F');
