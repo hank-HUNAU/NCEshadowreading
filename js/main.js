@@ -17,7 +17,9 @@ function getAudioUrl(filename, bookPath) {
   }
   // 从课程目录加载（支持多本书）
   if (bookPath) {
-    return `${bookPath}${filename}.mp3`;
+    // 确保路径以 / 结尾
+    const path = bookPath.endsWith('/') ? bookPath : bookPath + '/';
+    return `${path}${filename}.mp3`;
   }
   // 默认从 NCE1 加载
   return `./audio/NCE1/${filename}.mp3`;
@@ -30,7 +32,9 @@ function getLrcUrl(filename, bookPath) {
   }
   // 从课程目录加载（支持多本书）
   if (bookPath) {
-    return `${bookPath}${filename}.lrc`;
+    // 确保路径以 / 结尾
+    const path = bookPath.endsWith('/') ? bookPath : bookPath + '/';
+    return `${path}${filename}.lrc`;
   }
   // 默认从 NCE1 加载
   return `./audio/NCE1/${filename}.lrc`;
