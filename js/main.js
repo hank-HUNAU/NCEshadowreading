@@ -10,7 +10,8 @@ const AUDIO_SOURCE = 'supabase';
 const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
 const SUPABASE_BUCKETS = {
   NCE1: 'nce1-audio',      // 新概念第一册
-  THINK_F: 'think0-audio'   // Think Level F
+  THINK_0: 'think0-audio', // Think Level 0
+  THINK_F: 'think0-audio'  // Think Level F（复用同一 bucket）
 };
 
 /* 获取 Supabase bucket 名称 */
