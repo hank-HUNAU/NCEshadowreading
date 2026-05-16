@@ -26,7 +26,9 @@ function getBucket(key) {
 function getAudioUrl(filename, bookPath, key) {
   if (AUDIO_SOURCE === 'supabase') {
     const bucket = getBucket(key);
-    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}.mp3`;
+    const url = `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}.mp3`;
+    console.log('[Audio URL]', { filename, key, bucket, url });
+    return url;
   }
   // 从课程目录加载（支持多本书）
   if (bookPath) {
@@ -42,7 +44,9 @@ function getAudioUrl(filename, bookPath, key) {
 function getLrcUrl(filename, bookPath, key) {
   if (AUDIO_SOURCE === 'supabase') {
     const bucket = getBucket(key);
-    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}.lrc`;
+    const url = `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}.lrc`;
+    console.log('[LRC URL]', { filename, key, bucket, url });
+    return url;
   }
   // 从课程目录加载（支持多本书）
   if (bookPath) {
