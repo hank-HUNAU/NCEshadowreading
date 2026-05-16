@@ -1,6 +1,6 @@
 {
   "books": [
-    { "key": "NCE1", "title": "新概念第一册", "bookPath": "./nce1" },
+    { "key": "NCE1", "title": "新概念第一册", "bookPath": "./audio/NCE1" },
     { "key": "THINK_F", "title": "Think Level F", "bookPath": "./think-f" }
   ]
 }
