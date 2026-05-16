@@ -373,8 +373,6 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
     font-size: 0.85rem;
   }
 
-/* ========== 手机端响应式 (≤767px) ========== */
-@media (max-width: 767px) {
   /* 手机竖屏：每行 4 张 */
   .grid-container {
     grid-template-columns: repeat(4, 1fr);
