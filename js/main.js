@@ -11,20 +11,28 @@ const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
 const SUPABASE_BUCKET = 'nce-audio';
 
 /* 获取音频 URL */
-function getAudioUrl(filename) {
+function getAudioUrl(filename, bookPath) {
   if (AUDIO_SOURCE === 'supabase') {
     return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.mp3`;
   }
-  // 默认从 GitHub 加载
+  // 从课程目录加载（支持多本书）
+  if (bookPath) {
+    return `${bookPath}${filename}.mp3`;
+  }
+  // 默认从 NCE1 加载
   return `./audio/NCE1/${filename}.mp3`;
 }
 
 /* 获取 LRC URL */
-function getLrcUrl(filename) {
+function getLrcUrl(filename, bookPath) {
   if (AUDIO_SOURCE === 'supabase') {
     return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.lrc`;
   }
-  // 默认从 GitHub 加载
+  // 从课程目录加载（支持多本书）
+  if (bookPath) {
+    return `${bookPath}${filename}.lrc`;
+  }
+  // 默认从 NCE1 加载
   return `./audio/NCE1/${filename}.lrc`;
 }
 
@@ -160,7 +168,7 @@ class App {
     this.els.dlg.showModal();
     
     // 异步加载 LRC
-    const lrcUrl = getLrcUrl(u.filename);
+    const lrcUrl = getLrcUrl(u.filename, this.path);
     let txt = this.cache.get(lrcUrl);
     if (!txt) {
       try {
@@ -178,7 +186,7 @@ class App {
     
     // 异步加载音频
     const audio = this.els.audio;
-    const audioSrc = getAudioUrl(u.filename);
+    const audioSrc = getAudioUrl(u.filename, this.path);
     console.log('Loading audio:', audioSrc);
     audio.src = audioSrc;
     audio.load();
