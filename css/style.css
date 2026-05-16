@@ -105,11 +105,7 @@ body {
   border-color: var(--primary);
 }
 
-.card.active {
-  border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.08);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-}
+/* 移除选中状态样式 */
 
 .card-num {
   font-size: 1.3rem; /* 大字号突出数字 */

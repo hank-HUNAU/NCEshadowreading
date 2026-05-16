@@ -291,7 +291,9 @@ class App {
   }
 
   activeCard(i) {
-    this.els.grid.querySelectorAll('.card').forEach((c, x) => c.classList.toggle('active', x === i));
+    // 移除 active 状态，不再高亮选中卡片
+    // const prev = this.els.grid.querySelector('.card.active');
+    // if (prev) prev.classList.remove('active');
   }
 
   navBtns() {
