@@ -74,16 +74,16 @@ body {
 /* 卡片网格 - 响应式设计 */
 .grid-container {
   display: grid;
-  /* 桌面端：每行 4 张 */
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  /* 桌面端：每行 12 张（NCE1 默认） */
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
   flex: 1;
 }
 
   .card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 10px;
     
     display: flex;
     flex-direction: column;
@@ -95,7 +95,7 @@ body {
     transition: all 0.25s ease;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     
-    /* 固定高度 - 匹配 NCE1 */
+    /* 固定高度 */
     min-height: 80px;
   }
 
@@ -108,15 +108,30 @@ body {
 /* 移除选中状态样式 */
 
 .card-num {
-  font-size: 1.5rem; /* 大字号突出数字 */
+  font-size: 1.3rem; /* 大字号突出数字 */
   font-weight: 700; /* 加粗 */
   color: var(--primary);
   line-height: 1;
   letter-spacing: 0.5px;
+}
+
+/* Think Level 0 专用布局：每行 4 张 + 标题 */
+.grid-container.think-layout {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.grid-container.think-layout .card {
+  min-height: 120px;
+  padding: 20px 16px;
+}
+
+.grid-container.think-layout .card-num {
+  font-size: 1.5rem;
   margin-bottom: 8px;
 }
 
-.card-title {
+.grid-container.think-layout .card-title {
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text);

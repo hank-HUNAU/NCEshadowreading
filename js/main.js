@@ -160,14 +160,24 @@ class App {
   }
 
   grid() {
+    // 根据书籍类型设置布局类名
+    if (this.key === 'THINK_0' || this.key === 'THINK_F') {
+      this.els.grid.classList.add('think-layout');
+    } else {
+      this.els.grid.classList.remove('think-layout');
+    }
+    
     this.els.grid.innerHTML = this.units.map((u, i) => {
       // 从 lesson_num 提取数字（如 "10-1" → "10-1"）
       const num = u.lesson_num || u.filename;
       
+      // Think Level 系列显示标题，NCE1 不显示
+      const showTitle = (this.key === 'THINK_0' || this.key === 'THINK_F');
+      
       return `
       <div class="card" data-i="${i}">
         <div class="card-num">${num}</div>
-        <div class="card-title">${u.title || ''}</div>
+        ${showTitle && u.title ? `<div class="card-title">${u.title}</div>` : ''}
       </div>`;
     }).join('');
   }
