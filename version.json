@@ -40,8 +40,16 @@
     "branch": "master"
   },
   "release": {
-    "tag": "v1.0.0",
+    "tag": "v1.1.0",
     "date": "2026-05-16",
-    "commit": "048f81b"
+    "commit": "ef5eaab",
+    "changes": [
+      "音频 preload 优化（metadata）",
+      "LRC 预加载（0 延迟显示）",
+      "骨架屏加载动画",
+      "播放进度保存",
+      "键盘快捷键（桌面端）",
+      "PWA 离线支持"
+    ]
   }
 }
