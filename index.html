@@ -96,5 +96,20 @@
 
   <audio id="audio" preload="auto"></audio>
   <script src="js/main.js"></script>
+  
+  <!-- 注册 Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => {
+            console.log('[SW] Service Worker registered:', reg.scope);
+          })
+          .catch(err => {
+            console.log('[SW] Service Worker registration failed:', err);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
