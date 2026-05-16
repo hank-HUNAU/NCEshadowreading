@@ -74,29 +74,29 @@ body {
 /* 卡片网格 */
 .grid-container {
   display: grid;
-  /* 稍微增加最小宽度，让卡片更方正 */
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  /* 每行 10 张卡片 */
+  grid-template-columns: repeat(10, 1fr);
+  gap: 12px;
   flex: 1;
 }
 
   .card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 8px;
     
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 12px;
+    padding: 8px;
     
     cursor: pointer;
     transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     
-    /* 手机端不使用 aspect-ratio，改用最小高度，防止内容被裁切 */
-    min-height: 110px;
+    /* 固定高度 */
+    min-height: 80px;
   }
 
 .card:hover {
@@ -112,19 +112,19 @@ body {
 }
 
 .card-num {
-  font-size: 0.9rem; /* 与标题一致 */
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--primary);
-  margin-bottom: 6px;
-  line-height: 1.3;
+  margin-bottom: 4px;
+  line-height: 1.2;
 }
 
 .card-title {
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   font-weight: 500;
-  color: var(--text); /* 加深标题颜色 */
+  color: var(--text);
   text-align: center;
-  line-height: 1.4;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
