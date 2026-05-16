@@ -4,7 +4,7 @@ const LS = { BOOK: 'nce_book', UNIT: k => `nce_${k}_u`, TIME: (k,u) => `nce_${k}
 
 /* 音频源配置 - 一键切换 */
 // 可选值：'github' 或 'supabase'
-const AUDIO_SOURCE = 'github';
+const AUDIO_SOURCE = 'supabase';
 
 /* Supabase 配置 */
 const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
