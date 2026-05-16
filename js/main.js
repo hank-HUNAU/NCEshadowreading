@@ -6,14 +6,26 @@ const LS = { BOOK: 'nce_book', UNIT: k => `nce_${k}_u`, TIME: (k,u) => `nce_${k}
 // 可选值：'github' 或 'supabase'
 const AUDIO_SOURCE = 'supabase';
 
-/* Supabase 配置 */
+/* Supabase 配置 - 多 bucket 支持 */
 const SUPABASE_URL = 'https://jikhdympaifsmubmwilp.supabase.co';
-const SUPABASE_BUCKET = 'nce1-audio';
+const SUPABASE_BUCKETS = {
+  NCE1: 'nce1-audio',      // 新概念第一册
+  THINK_F: 'think0-audio'   // Think Level F
+};
+
+/* 获取 Supabase bucket 名称 */
+function getBucket(key) {
+  if (AUDIO_SOURCE === 'supabase') {
+    return SUPABASE_BUCKETS[key] || SUPABASE_BUCKETS.NCE1;
+  }
+  return null;
+}
 
 /* 获取音频 URL */
-function getAudioUrl(filename, bookPath) {
+function getAudioUrl(filename, bookPath, key) {
   if (AUDIO_SOURCE === 'supabase') {
-    return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.mp3`;
+    const bucket = getBucket(key);
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}.mp3`;
   }
   // 从课程目录加载（支持多本书）
   if (bookPath) {
@@ -26,9 +38,10 @@ function getAudioUrl(filename, bookPath) {
 }
 
 /* 获取 LRC URL */
-function getLrcUrl(filename, bookPath) {
+function getLrcUrl(filename, bookPath, key) {
   if (AUDIO_SOURCE === 'supabase') {
-    return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}.lrc`;
+    const bucket = getBucket(key);
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}.lrc`;
   }
   // 从课程目录加载（支持多本书）
   if (bookPath) {
@@ -172,7 +185,7 @@ class App {
     this.els.dlg.showModal();
     
     // 异步加载 LRC
-    const lrcUrl = getLrcUrl(u.filename, this.path);
+    const lrcUrl = getLrcUrl(u.filename, this.path, this.key);
     let txt = this.cache.get(lrcUrl);
     if (!txt) {
       try {
@@ -190,7 +203,7 @@ class App {
     
     // 异步加载音频
     const audio = this.els.audio;
-    const audioSrc = getAudioUrl(u.filename, this.path);
+    const audioSrc = getAudioUrl(u.filename, this.path, this.key);
     console.log('Loading audio:', audioSrc);
     audio.src = audioSrc;
     audio.load();
