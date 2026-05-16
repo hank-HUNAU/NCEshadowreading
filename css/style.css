@@ -195,14 +195,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
+  border: none !important; /* 强制无边框 */
+  outline: none !important; /* 移除轮廓线 */
   background: transparent;
   color: var(--text-dim);
-  border-radius: 0; /* 无边框圆角 */
+  border-radius: 0;
   cursor: pointer;
+  box-shadow: none; /* 移除阴影 */
 }
 
-.icon-btn:hover { background: transparent; color: var(--text); }
+.icon-btn:hover { 
+  background: transparent !important;
+  color: var(--text);
+  border: none !important;
+  outline: none !important;
+}
+
+.icon-btn:active {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+}
 
 .dialog-title {
   flex: 1;
