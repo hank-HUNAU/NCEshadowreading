@@ -163,12 +163,8 @@ class App {
       return `
       <div class="card" data-i="${i}">
         <div class="card-num">${num}</div>
-        <div class="card-title" data-filename="${u.filename}">${u.title}</div>
       </div>`;
     }).join('');
-    
-    // 异步从 LRC 获取标题
-    this.updateTitlesFromLrc();
   }
 
   async updateTitlesFromLrc() {
