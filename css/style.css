@@ -380,27 +380,6 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
   }
-  
-  /* 手机横屏：每行 8 张 */
-  @media (orientation: landscape) {
-    .grid-container {
-      grid-template-columns: repeat(8, 1fr);
-      gap: 6px;
-    }
-    
-  .card {
-    min-height: 85px;
-    padding: 18px;
-  }
-
-  .card-num {
-    font-size: 1.2rem;
-  }
-    
-    .card-num {
-      font-size: 1rem;
-    }
-  }
 
   .card {
     border-radius: 10px;
@@ -417,6 +396,24 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
     width: 100%;
     height: 100%;
   }
+}
+
+/* 手机横屏：每行 8 张 */
+@media (max-width: 767px) and (orientation: landscape) {
+  .grid-container {
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+  }
+  
+  .card {
+    min-height: 65px;
+    padding: 10px 6px;
+  }
+  
+  .card-num {
+    font-size: 1rem;
+  }
+}
 
   .dialog-inner {
     border-radius: 0;
