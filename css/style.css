@@ -149,7 +149,7 @@ body {
 }
 
 .grid-container.think-layout .card-title {
-  font-size: 0.75rem;
+  font-size: 1.1rem;  /* 增大字号 */
   font-weight: 500;
   color: var(--text);
   text-align: center;
@@ -472,7 +472,7 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
   }
 
   .grid-container.think-layout .card-title {
-    font-size: 0.6rem;
+    font-size: 0.85rem;  /* 手机端自适应缩小 */
     white-space: nowrap;      /* 单行显示 */
     overflow: hidden;
     text-overflow: ellipsis;  /* 超出显示省略号 */
@@ -522,7 +522,7 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
   }
 
   .grid-container.think-layout .card-title {
-    font-size: 0.65rem;
+    font-size: 0.9rem;  /* 手机横屏自适应 */
     white-space: nowrap;      /* 单行显示 */
     overflow: hidden;
     text-overflow: ellipsis;  /* 超出显示省略号 */
