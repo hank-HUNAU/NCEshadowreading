@@ -430,6 +430,25 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
     font-size: 1.1rem;
   }
 
+  /* Think Level 0 手机端保持正方形 */
+  .grid-container.think-layout {
+    gap: 12px;
+  }
+
+  .grid-container.think-layout .card {
+    aspect-ratio: 1;  /* 正方形 */
+    padding: 16px;
+  }
+
+  .grid-container.think-layout .card-num {
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+  }
+
+  .grid-container.think-layout .card-title {
+    font-size: 0.85rem;
+  }
+
   /* 播放器适配手机全屏 */
   .player-dialog {
     width: 100%;
@@ -451,6 +470,26 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
   
   .card-num {
     font-size: 1rem;
+  }
+
+  /* Think Level 0 手机横屏保持正方形 */
+  .grid-container.think-layout {
+    grid-template-columns: repeat(4, 1fr);  /* 保持 4 列 */
+    gap: 10px;
+  }
+
+  .grid-container.think-layout .card {
+    aspect-ratio: 1;  /* 正方形 */
+    padding: 12px 10px;
+  }
+
+  .grid-container.think-layout .card-num {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+  }
+
+  .grid-container.think-layout .card-title {
+    font-size: 0.7rem;
   }
 }
 
