@@ -128,19 +128,19 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Think Level 0 专用布局：每行 4 张 + 标题单行 + 长方形 300×75px */
+/* Think Level 0 专用布局：6 列 × 8 行 = 48 张卡片 */
 .grid-container.think-layout {
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(6, 1fr);  /* 6 列 */
+  gap: 12px;
 }
 
 .grid-container.think-layout .card {
-  width: 300px;   /* 固定宽度 300px */
-  height: 75px;   /* 固定高度 75px */
-  padding: 14px 16px;
+  width: 182px;   /* 卡片宽度 */
+  height: 45px;   /* 卡片高度（4:1 比例） */
+  padding: 8px 12px;
   display: flex;
-  justify-content: center;  /* 水平居中 */
-  align-items: center;      /* 垂直居中 */
+  justify-content: center;
+  align-items: center;
 }
 
 /* 隐藏第一行数字 */
@@ -149,7 +149,7 @@ body {
 }
 
 .grid-container.think-layout .card-title {
-  font-size: 1rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text);
   text-align: center;
@@ -452,14 +452,14 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
     font-size: 1.1rem;
   }
 
-  /* Think Level 0 手机端自适应长方形（宽：高 = 4:1） */
+  /* Think Level 0 手机端 6 列自适应长方形（宽：高 = 4:1） */
   .grid-container.think-layout {
-    gap: 10px;
+    gap: 6px;
   }
 
   .grid-container.think-layout .card {
     aspect-ratio: 4/1;  /* 长方形：宽度是高度的 4 倍 */
-    padding: 10px 12px;
+    padding: 6px 8px;
     min-height: auto;  /* 覆盖默认的 min-height */
     display: flex;
     justify-content: center;  /* 水平居中 */
@@ -472,7 +472,7 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
   }
 
   .grid-container.think-layout .card-title {
-    font-size: 0.85rem;
+    font-size: 0.6rem;
     white-space: nowrap;      /* 单行显示 */
     overflow: hidden;
     text-overflow: ellipsis;  /* 超出显示省略号 */
@@ -501,15 +501,15 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
     font-size: 1rem;
   }
 
-  /* Think Level 0 手机横屏自适应长方形（宽：高 = 4:1） */
+  /* Think Level 0 手机横屏 6 列自适应长方形（宽：高 = 4:1） */
   .grid-container.think-layout {
-    grid-template-columns: repeat(4, 1fr);  /* 保持 4 列 */
-    gap: 8px;
+    grid-template-columns: repeat(6, 1fr);  /* 6 列 */
+    gap: 10px;
   }
 
   .grid-container.think-layout .card {
     aspect-ratio: 4/1;  /* 长方形 */
-    padding: 8px 10px;
+    padding: 6px 10px;
     min-height: auto;
     display: flex;
     justify-content: center;  /* 水平居中 */
@@ -522,7 +522,7 @@ body.blur-cn .line-cn { filter: blur(4px); user-select: none; }
   }
 
   .grid-container.think-layout .card-title {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     white-space: nowrap;      /* 单行显示 */
     overflow: hidden;
     text-overflow: ellipsis;  /* 超出显示省略号 */
