@@ -128,24 +128,24 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Think Level 0 专用布局：每行 8 张（原 4 张） */
+/* Think Level 0 专用布局：每行 4 张 + 标题 + 正方形 */
 .grid-container.think-layout {
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
 .grid-container.think-layout .card {
-  min-height: 60px;  /* 原 120px 减半 */
-  padding: 10px 8px;  /* 原 20px 16px 减半 */
+  aspect-ratio: 1;  /* 正方形：宽高比 1:1 */
+  padding: 20px 16px;
 }
 
 .grid-container.think-layout .card-num {
-  font-size: 0.75rem;  /* 原 1.5rem 减半 */
-  margin-bottom: 4px;  /* 原 8px 减半 */
+  font-size: 2rem;  /* 增大数字适配正方形 */
+  margin-bottom: 8px;
 }
 
 .grid-container.think-layout .card-title {
-  font-size: 0.45rem;  /* 原 0.9rem 减半 */
+  font-size: 1rem;
   font-weight: 500;
   color: var(--text);
   text-align: center;
